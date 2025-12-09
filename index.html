@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600&family=Zeyada&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     
     <!-- MediaPipe Hands -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js" crossorigin="anonymous"></script>
     
     <!-- Babel for in-browser compilation -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -41,11 +41,13 @@
     </script>
     <style>
       body { background-color: #F9D59B; overflow-x: hidden; cursor: auto; }
-      .custom-cursor { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="12" fill="%23F9D59B" stroke="%235D4037" stroke-width="2"/><circle cx="12" cy="14" r="1.5" fill="%235D4037"/><circle cx="20" cy="14" r="1.5" fill="%235D4037"/></svg>'), auto; }
+      /* 替换了鼠标光标为本地图片 */
+      .custom-cursor { cursor: url('./images/usagi-cursor.png'), auto; }
       .scrollbar-hide::-webkit-scrollbar { display: none; }
       .mirror-x { transform: scaleX(-1); }
     </style>
     
+    <!-- Import Maps: Fixed to prevent version conflicts -->
     <script type="importmap">
     {
       "imports": {
@@ -71,7 +73,7 @@
       import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
       import { createRoot } from 'react-dom/client';
       import { motion, AnimatePresence } from 'framer-motion';
-      import { Volume2, VolumeX, ArrowLeft, X, ArrowRight, Camera, Mic, Flame, Wind, Hand, RefreshCw, XCircle, Heart, Sparkles, Download, Share2, PenTool } from 'lucide-react';
+      import { Volume2, VolumeX, ArrowLeft, X, ArrowRight, Camera, Mic, Flame, Wind, Hand, RefreshCw, XCircle, Heart, Sparkles, Download, Share2, PenTool, AlertCircle } from 'lucide-react';
       import * as THREE from 'three';
       import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
       import gsap from 'gsap';
@@ -84,11 +86,11 @@
       
       const ASSETS = {
         balloons: [
-          'https://cdn-icons-png.flaticon.com/512/3362/3362719.png',
-          'https://cdn-icons-png.flaticon.com/512/3362/3362725.png',
-          'https://cdn-icons-png.flaticon.com/512/3362/3362719.png'
+          './images/balloon1.png',
+          './images/balloon2.png',
+          './images/balloon3.png'
         ],
-        giftImage: 'https://via.placeholder.com/300x300.png?text=Surprise!',
+        giftImage: './images/usagi-surprise.png',
         sounds: {
           bgm: 'https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg',
         }
@@ -104,11 +106,17 @@
         messages: ["🌸 桃花朵朵开!", "✨ 今天你发光!", "🥕 零食吃不胖!", "💰 暴富在路上!", "💤 天天睡好觉!"]
       };
 
-      const PHOTOS = Array.from({ length: 9 }, (_, i) => ({
-        id: i + 1,
-        url: `https://picsum.photos/800/800?random=${i + 10}`,
-        rotation: (Math.random() * 10) - 5
-      }));
+      const PHOTOS = [
+        { id: 1, url: 'https://picsum.photos/800/800?random=11', rotation: -3 },
+        { id: 2, url: 'https://picsum.photos/800/800?random=12', rotation: 2 },
+        { id: 3, url: 'https://picsum.photos/800/800?random=13', rotation: -1 },
+        { id: 4, url: 'https://picsum.photos/800/800?random=14', rotation: 4 },
+        { id: 5, url: 'https://picsum.photos/800/800?random=15', rotation: -2 },
+        { id: 6, url: 'https://picsum.photos/800/800?random=16', rotation: 3 },
+        { id: 7, url: 'https://picsum.photos/800/800?random=17', rotation: -4 },
+        { id: 8, url: 'https://picsum.photos/800/800?random=18', rotation: 1 },
+        { id: 9, url: 'https://picsum.photos/800/800?random=19', rotation: -2 }
+      ];
 
       // --- 2. COMPONENTS ---
 
@@ -221,18 +229,50 @@
 
       // --- 3. SCENES ---
 
-      // SCENE 1: Intro
+      // SCENE 1: Intro (Updated Balloon Logic)
       const Scene1Intro = ({ onStart }) => {
         const balloons = useMemo(() => {
-          const baseBalloons = ASSETS.balloons;
-          const allBalloons = [...baseBalloons, ...baseBalloons, ...baseBalloons, ...baseBalloons];
-          return allBalloons.map((src, i) => ({ id: i, src, left: `${(i / 12) * 90 + 5}%`, delay: i * 0.5, duration: (window.innerHeight + 300) / 50 }));
+          // Generates 15 balloons with randomized physical properties for natural movement
+          return Array.from({ length: 15 }).map((_, i) => {
+            const scale = Math.random() * 0.4 + 0.8; // Random size: 0.8x to 1.2x
+            const speed = Math.random() * 10 + 15;   // Rise duration: 15s to 25s (slow & natural)
+            const sway = Math.random() * 50 + 30;    // Horizontal sway distance: 30px to 80px
+            const swayTime = Math.random() * 3 + 4;  // Sway cycle duration: 4s to 7s
+            
+            return {
+              id: i,
+              src: ASSETS.balloons[i % ASSETS.balloons.length],
+              left: Math.random() * 90 + 5, // Random start X: 5% to 95%
+              scale: scale,
+              duration: speed,
+              delay: Math.random() * 12,    // Staggered start delay up to 12s
+              swayAmount: sway,
+              swayDuration: swayTime,
+              rotateAmount: Math.random() * 10 + 5 // Slight rotation wobble
+            };
+          });
         }, []);
+
         return (
           <motion.div className="relative w-full h-screen flex flex-col items-center justify-center z-10 overflow-hidden" exit={{ opacity: 0, x: -50 }}>
             {balloons.map((b) => (
-              <motion.img key={b.id} src={b.src} className="absolute -bottom-40 w-[100px] object-contain opacity-90" style={{ left: b.left }}
-                animate={{ y: -window.innerHeight - 300, x: (b.id % 2 === 0 ? 20 : -20) }} transition={{ y: { duration: b.duration, ease: "linear", repeat: Infinity, delay: b.delay }, x: { duration: 3, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" } }} />
+              <motion.img 
+                key={b.id} 
+                src={b.src} 
+                className="absolute -bottom-40 w-[100px] object-contain opacity-90" 
+                style={{ left: `${b.left}%`, scale: b.scale }}
+                initial={{ y: 0 }}
+                animate={{ 
+                  y: -window.innerHeight - 300, // Move well above the screen
+                  x: [0, b.swayAmount, 0, -b.swayAmount, 0], // Continuous sine-wave like sway
+                  rotate: [0, b.rotateAmount, 0, -b.rotateAmount, 0] // Gentle wobble
+                }} 
+                transition={{ 
+                  y: { duration: b.duration, ease: "linear", repeat: Infinity, delay: b.delay }, 
+                  x: { duration: b.swayDuration, ease: "easeInOut", repeat: Infinity },
+                  rotate: { duration: b.swayDuration - 1, ease: "easeInOut", repeat: Infinity } // Slightly offset from sway
+                }} 
+              />
             ))}
             <motion.div initial={{ x: -window.innerWidth, y: 100 }} animate={{ x: 0, y: 0 }} transition={{ type: "spring", stiffness: 60, damping: 15 }} className="mb-8 relative z-20 cursor-pointer" whileHover={{ scale: 1.05 }} onClick={onStart}>
               <motion.div className="absolute inset-0 bg-usagi-main/30 rounded-full blur-xl" animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 2, repeat: Infinity }} />
