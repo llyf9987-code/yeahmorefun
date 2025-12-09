@@ -1,0 +1,731 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Happy Birthday Xiao Ye! | Usagi Wishes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600&family=Zeyada&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    
+    <!-- MediaPipe Hands (Pinned Version) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js" crossorigin="anonymous"></script>
+    
+    <!-- Babel for in-browser compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              usagi: {
+                main: '#F9D59B', orange: '#FBBF77', gold: '#F8C860',
+                pink: '#F8C8DC', text: '#5D4037', light: '#FFFBE6', hover: '#F7C070'
+              }
+            },
+            fontFamily: {
+              sans: ['Fredoka', 'sans-serif'],
+              hand: ['Zeyada', 'cursive'],
+              cute: ['"ZCOOL KuaiLe"', 'cursive'],
+            },
+            animation: {
+              'float': 'float 3s ease-in-out infinite',
+              'bounce-slow': 'bounce 2s infinite',
+            },
+            keyframes: {
+              float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body { background-color: #F9D59B; overflow-x: hidden; cursor: auto; }
+      .custom-cursor { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="12" fill="%23F9D59B" stroke="%235D4037" stroke-width="2"/><circle cx="12" cy="14" r="1.5" fill="%235D4037"/><circle cx="20" cy="14" r="1.5" fill="%235D4037"/></svg>'), auto; }
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+      .mirror-x { transform: scaleX(-1); }
+    </style>
+    
+    <!-- Import Maps: Fixed to prevent version conflicts -->
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "framer-motion": "https://esm.sh/framer-motion@10.16.4?deps=react@18.2.0,react-dom@18.2.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.292.0?deps=react@18.2.0",
+    "three": "https://esm.sh/three@0.160.0",
+    "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/",
+    "gsap": "https://esm.sh/gsap@3.12.5",
+    "canvas-confetti": "https://esm.sh/canvas-confetti@1.9.2",
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "three/": "https://aistudiocdn.com/three@^0.181.2/"
+  }
+}
+</script>
+  <link rel="stylesheet" href="/index.css">
+</head>
+  <body class="custom-cursor">
+    <div id="root"></div>
+
+    <!-- MAIN APP SCRIPT -->
+    <script type="text/babel" data-presets="react,typescript" data-type="module">
+      import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { motion, AnimatePresence } from 'framer-motion';
+      import { Volume2, VolumeX, ArrowLeft, X, ArrowRight, Camera, Mic, Flame, Wind, Hand, RefreshCw, XCircle, Heart, Sparkles, Download, Share2, PenTool } from 'lucide-react';
+      import * as THREE from 'three';
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+      import gsap from 'gsap';
+      import confetti from 'canvas-confetti';
+      import html2canvas from 'html2canvas';
+
+      // --- 1. CONSTANTS & ASSETS ---
+      const RECIPIENT_NAME = "小叶";
+      const SENDER_NAME = "Best Friend";
+      
+      const ASSETS = {
+        balloons: [
+          'https://cdn-icons-png.flaticon.com/512/3362/3362719.png',
+          'https://cdn-icons-png.flaticon.com/512/3362/3362725.png',
+          'https://cdn-icons-png.flaticon.com/512/3362/3362719.png'
+        ],
+        giftImage: 'https://via.placeholder.com/300x300.png?text=Surprise!',
+        sounds: {
+          bgm: 'https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg',
+          usagiCall: 'https://commondatastorage.googleapis.com/codeskulptor-assets/week7-brrring.m4a',
+          fireStart: 'https://commondatastorage.googleapis.com/codeskulptor-assets/sounddogs/thrust.mp3',
+          blowAir: 'https://commondatastorage.googleapis.com/codeskulptor-assets/sounddogs/missile.mp3'
+        }
+      };
+
+      const BIRTHDAY_LETTER = `祝你生日快乐！
+      愿你像乌萨奇一样无忧无虑，
+      被温暖包围，
+      暴富、开心、健康！
+      所有美好如期而至~`;
+
+      const GIFT_SURPRISES = {
+        messages: ["🌸 桃花朵朵开!", "✨ 今天你发光!", "🥕 零食吃不胖!", "💰 暴富在路上!", "💤 天天睡好觉!"]
+      };
+
+      const PHOTOS = Array.from({ length: 9 }, (_, i) => ({
+        id: i + 1,
+        url: `https://picsum.photos/800/800?random=${i + 10}`,
+        rotation: (Math.random() * 10) - 5
+      }));
+
+      // --- 2. COMPONENTS ---
+
+      // Usagi Character Component
+      const UsagiCharacter = ({ action, className, onClick, boardText }) => {
+        const variants = {
+          idle: { y: [0, -5, 0], transition: { repeat: Infinity, duration: 2 } },
+          jump: { y: [0, -50, 0], scale: [1, 1.1, 0.9, 1], transition: { repeat: Infinity, duration: 0.6 } },
+          wave: { rotate: [0, 10, -10, 0], transition: { repeat: Infinity, duration: 1 } },
+          camera: { scale: [1, 1.05, 1], transition: { duration: 0.3 } },
+          cheer: { y: [0, -20, 0], transition: { repeat: Infinity, duration: 0.4 } },
+          shhh: { scale: 1 },
+          'hold-board': { y: [0, -3, 0], transition: { repeat: Infinity, duration: 3 } },
+          heart: { scale: [1, 1.1, 1], transition: { duration: 0.5, repeat: Infinity, repeatDelay: 1 } }
+        };
+
+        return (
+          <motion.div 
+            className={`relative cursor-pointer select-none ${className}`}
+            onClick={onClick}
+            animate={action}
+            variants={variants}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <svg viewBox="0 0 120 150" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-lg">
+              <g stroke="#F9D59B" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round">
+                  <path d="M30 40C20 10 35 0 45 10C55 20 40 50 40 50" fill="#FFF" />
+                  <path d="M90 40C100 10 85 0 75 10C65 20 80 50 80 50" fill="#FFF" />
+                  <ellipse cx="60" cy="90" rx="50" ry="55" fill="#FFF" />
+              </g>
+              <g stroke="#5D4037" strokeWidth="3" strokeLinecap="round">
+                  <circle cx="45" cy="80" r="3" fill="#5D4037" stroke="none"/>
+                  <circle cx="75" cy="80" r="3" fill="#5D4037" stroke="none"/>
+                  {action === 'cheer' || action === 'jump' || action === 'heart' ? (
+                      <path d="M50 90 Q60 100 70 90" strokeWidth="2" fill="none"/>
+                  ) : action === 'shhh' ? (
+                      <circle cx="60" cy="95" r="5" fill="#F8C8DC" stroke="none"/> 
+                  ) : (
+                      <path d="M55 90 Q60 95 65 90" strokeWidth="2" fill="none"/>
+                  )}
+                  <circle cx="35" cy="90" r="6" fill="#F8C8DC" stroke="none" opacity="0.6" />
+                  <circle cx="85" cy="90" r="6" fill="#F8C8DC" stroke="none" opacity="0.6" />
+                  {action === 'wave' || action === 'cheer' || action === 'heart' ? (
+                      <path d="M15 80 Q5 60 25 50" />
+                  ) : action === 'hold-board' ? (
+                      <path d="M20 100 Q30 90 40 100" />
+                  ) : (
+                      <path d="M20 100 Q10 110 30 110" />
+                  )}
+                  {action === 'camera' ? (
+                      <rect x="40" y="95" width="40" height="25" rx="2" fill="#333" stroke="none"/>
+                  ) : action === 'hold-board' ? (
+                      <path d="M100 100 Q90 90 80 100" />
+                  ) : action === 'heart' ? (
+                      <path d="M105 80 Q115 60 95 50" />
+                  ) : (
+                      <path d="M100 100 Q110 110 90 110" />
+                  )}
+                  <path d="M40 135 Q40 150 50 145" />
+                  <path d="M80 135 Q80 150 70 145" />
+              </g>
+              {action === 'heart' && (
+                  <path d="M60 40 L65 35 M60 40 L55 35" stroke="#FF8A80" strokeWidth="2" />
+              )}
+              {action === 'hold-board' && (
+                  <foreignObject x="10" y="30" width="100" height="60">
+                      <div className="w-full h-full bg-white border-2 border-dashed border-usagi-orange rounded-lg flex items-center justify-center p-1 shadow-md transform -rotate-2">
+                          <div className="text-[10px] text-center font-hand text-usagi-text leading-tight break-words w-full">
+                              {boardText || "Happy Birthday!"}
+                          </div>
+                      </div>
+                  </foreignObject>
+              )}
+            </svg>
+          </motion.div>
+        );
+      };
+
+      // Background Component
+      const Background = () => {
+        const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+        useEffect(() => {
+          const handleMouseMove = (e) => setMousePosition({ x: e.clientX, y: e.clientY });
+          window.addEventListener('mousemove', handleMouseMove);
+          return () => window.removeEventListener('mousemove', handleMouseMove);
+        }, []);
+        return (
+          <div className="fixed inset-0 z-0 overflow-hidden bg-gradient-to-b from-[#FFF9E6] to-[#F9D59B] pointer-events-none">
+            <motion.div initial={{ x: -100 }} animate={{ x: '100vw' }} transition={{ duration: 35, repeat: Infinity, ease: 'linear' }} className="absolute top-10 left-0 text-white opacity-60 text-9xl blur-sm">☁️</motion.div>
+            {Array.from({ length: 20 }).map((_, i) => (
+              <motion.div key={i} className="absolute rounded-full bg-[#FBBF77] shadow-[0_0_10px_#FBBF77]"
+                style={{ width: Math.random() * 8 + 4, height: Math.random() * 8 + 4, top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`, x: (mousePosition.x * 0.02 * (i % 2 === 0 ? 1 : -1)), y: (mousePosition.y * 0.02 * (i % 2 === 0 ? 1 : -1)) }}
+                animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.2, 1] }} transition={{ duration: 1, repeat: Infinity, delay: Math.random() * 2 }}
+              />
+            ))}
+          </div>
+        );
+      };
+
+      // Back Button Component
+      const BackButton = ({ onClick, disabled = false }) => (
+        <motion.button onClick={onClick} disabled={disabled} initial={{ opacity: 0 }} animate={{ opacity: disabled ? 0.5 : 1 }} whileHover={!disabled ? { scale: 1.1 } : {}} whileTap={!disabled ? { scale: 0.9 } : {}}
+          className={`fixed bottom-6 right-6 z-50 flex items-center justify-center w-16 h-16 rounded-full shadow-lg border-4 border-white transition-colors duration-300 ${disabled ? 'bg-usagi-main/50 cursor-not-allowed text-white/50' : 'bg-usagi-main hover:bg-usagi-hover text-usagi-text cursor-pointer'}`}>
+          <div className="absolute -top-4 left-2 w-4 h-8 bg-inherit rounded-full border-2 border-white transform -rotate-12 -z-10" />
+          <div className="absolute -top-4 right-2 w-4 h-8 bg-inherit rounded-full border-2 border-white transform rotate-12 -z-10" />
+          <ArrowLeft size={32} strokeWidth={3} />
+        </motion.button>
+      );
+
+      // --- 3. SCENES ---
+
+      // SCENE 1: Intro
+      const Scene1Intro = ({ onStart }) => {
+        const balloons = useMemo(() => {
+          const baseBalloons = ASSETS.balloons;
+          const allBalloons = [...baseBalloons, ...baseBalloons, ...baseBalloons, ...baseBalloons];
+          return allBalloons.map((src, i) => ({ id: i, src, left: `${(i / 12) * 90 + 5}%`, delay: i * 0.5, duration: (window.innerHeight + 300) / 50 }));
+        }, []);
+        return (
+          <motion.div className="relative w-full h-screen flex flex-col items-center justify-center z-10 overflow-hidden" exit={{ opacity: 0, x: -50 }}>
+            {balloons.map((b) => (
+              <motion.img key={b.id} src={b.src} className="absolute -bottom-40 w-[100px] object-contain opacity-90" style={{ left: b.left }}
+                animate={{ y: -window.innerHeight - 300, x: (b.id % 2 === 0 ? 20 : -20) }} transition={{ y: { duration: b.duration, ease: "linear", repeat: Infinity, delay: b.delay }, x: { duration: 3, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" } }} />
+            ))}
+            <motion.div initial={{ x: -window.innerWidth, y: 100 }} animate={{ x: 0, y: 0 }} transition={{ type: "spring", stiffness: 60, damping: 15 }} className="mb-8 relative z-20 cursor-pointer" whileHover={{ scale: 1.05 }} onClick={onStart}>
+              <motion.div className="absolute inset-0 bg-usagi-main/30 rounded-full blur-xl" animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 2, repeat: Infinity }} />
+              <UsagiCharacter action="jump" className="w-56 h-56 md:w-72 md:h-72 relative z-10" />
+            </motion.div>
+            <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={onStart}
+              className="group relative z-20 bg-usagi-main text-usagi-text font-bold py-3 px-12 rounded-full shadow-lg border-4 border-white hover:border-usagi-orange transition-all overflow-hidden">
+              <span className="relative z-10 text-xl font-hand">开启祝福 ✨</span>
+            </motion.button>
+          </motion.div>
+        );
+      };
+
+      // SCENE 2: Photo Wall
+      const Scene2PhotoWall = ({ isActive, onNext, showButton, isBackgroundMode }) => {
+        const [photosGathered, setPhotosGathered] = useState(false);
+        const [usagiAction, setUsagiAction] = useState('camera');
+        useEffect(() => {
+          if (isActive && !isBackgroundMode && !photosGathered) {
+            const timer = setTimeout(() => {
+              setPhotosGathered(true);
+              setUsagiAction('heart');
+              confetti({ particleCount: 150, spread: 120, origin: { y: 0.6 }, colors: ['#F9D59B', '#F8C8DC', '#FBBF77', '#FFFFFF'] });
+            }, PHOTOS.length * 1500 + 1000);
+            return () => clearTimeout(timer);
+          }
+          if (isActive && !isBackgroundMode && photosGathered) setUsagiAction('heart');
+        }, [isActive, isBackgroundMode, photosGathered]);
+
+        return (
+          <div className={`w-full h-full flex flex-col items-center justify-center p-4 transition-all duration-1000 ${isBackgroundMode ? 'brightness-50 opacity-40 grayscale-[0.2]' : ''}`}>
+            {!isBackgroundMode && isActive && (
+              <motion.h2 initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-3xl md:text-5xl font-hand text-usagi-text mb-6 z-10 drop-shadow-sm text-center">我们的美好瞬间</motion.h2>
+            )}
+            <motion.div className="relative bg-white/60 backdrop-blur-sm border-[6px] border-[#FFF5E1] shadow-2xl grid grid-cols-3 gap-[3px]" style={{ width: '85%', height: '70%' }} initial={{ scale: 0.95 }} animate={photosGathered ? { scale: 1.05 } : { scale: 1 }}>
+              {PHOTOS.map((photo, index) => (
+                <motion.div key={photo.id} className="relative bg-white overflow-hidden border border-usagi-light w-full h-full"
+                  initial={{ opacity: 0, x: index % 2 === 0 ? -600 : 600, y: index < 4 ? -400 : 400, rotate: (Math.random() - 0.5) * 10 }}
+                  animate={{ opacity: 1, x: 0, y: 0, rotate: photosGathered ? 0 : photo.rotation }}
+                  transition={{ delay: index * 1.5, duration: 2, type: "spring", stiffness: 40 }}>
+                  <img src={photo.url} alt="Memory" className="w-full h-full object-cover" />
+                </motion.div>
+              ))}
+            </motion.div>
+            <motion.div className="fixed bottom-10 right-4 md:right-10 z-10 pointer-events-none" animate={isBackgroundMode ? { x: 300, opacity: 0 } : { x: 0, opacity: 1 }}>
+              <UsagiCharacter action={usagiAction} className="w-32 h-32 md:w-48 md:h-48" />
+            </motion.div>
+            {showButton && photosGathered && !isBackgroundMode && (
+              <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ scale: 1.05, backgroundColor: "#FBBF77" }} onClick={onNext}
+                className="mt-8 z-20 bg-usagi-main text-usagi-text px-10 py-3 rounded-full font-bold shadow-lg border-2 border-white transition-colors flex items-center gap-2">
+                <span>查看专属祝福</span><span className="text-xl">💌</span>
+              </motion.button>
+            )}
+          </div>
+        );
+      };
+
+      // SCENE 3: Wishes
+      const Scene3Wishes = ({ onGoToCakeInteraction, onGoToOutro }) => {
+        const [giftOpen, setGiftOpen] = useState(false);
+        const [scrollY, setScrollY] = useState(0);
+        useEffect(() => {
+          const handleScroll = () => setScrollY(window.scrollY);
+          window.addEventListener('scroll', handleScroll);
+          return () => window.removeEventListener('scroll', handleScroll);
+        }, []);
+        return (
+          <div className="relative min-h-screen w-full overflow-y-auto">
+            <div className="relative z-20 flex flex-col md:flex-row min-h-screen items-center justify-center p-6 gap-8 md:gap-16">
+              <motion.div initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 max-w-lg bg-[rgba(249,213,155,0.85)] backdrop-blur-sm p-8 rounded-[2rem] shadow-xl border-4 border-white/50">
+                <h2 className="text-4xl font-hand font-bold text-usagi-text mb-6 drop-shadow-sm">祝{RECIPIENT_NAME}生日快乐!</h2>
+                <p className="font-hand text-2xl leading-loose whitespace-pre-line text-[#5D4037] drop-shadow-sm">{BIRTHDAY_LETTER}</p>
+                <div className="mt-10 flex items-center justify-end gap-3 text-usagi-text"><span className="font-bold text-lg font-sans">来自 {SENDER_NAME}</span><div className="w-10 h-10 bg-usagi-orange rounded-full overflow-hidden border-2 border-white flex items-center justify-center"><span className="text-xl">🐰</span></div></div>
+              </motion.div>
+              <div className="flex-1 flex flex-col items-center gap-10 relative pb-20 md:pb-0">
+                <motion.div className="absolute -right-4 top-0 hidden md:block pointer-events-none" animate={{ y: scrollY * 0.5 + 20 }} transition={{ type: "spring", stiffness: 50 }}><UsagiCharacter action="jump" className="w-36 h-36" /></motion.div>
+                <motion.div className="relative cursor-pointer z-20 group" onClick={onGoToCakeInteraction} whileHover={{ scale: 1.1 }}>
+                  <div className="relative flex flex-col items-center"><div className="text-[9rem] leading-none drop-shadow-2xl transition-transform group-hover:rotate-6">🎂</div><span className="mt-4 bg-white/90 px-4 py-2 rounded-full text-sm font-bold text-usagi-text opacity-0 group-hover:opacity-100 transition-opacity shadow-md">进入蛋糕房 🕯️</span></div>
+                </motion.div>
+                <motion.div className="relative cursor-pointer z-20" onClick={() => setGiftOpen(true)} whileHover={{ rotate: [0, -5, 5, 0], scale: 1.05 }}>
+                  <div className="text-8xl drop-shadow-xl filter brightness-110">🎁</div><div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white/50 px-2 rounded-md text-xs font-bold text-usagi-text/70">拆礼物!</div>
+                </motion.div>
+                <motion.button onClick={onGoToOutro} className="mt-4 bg-usagi-main text-usagi-text font-bold py-3 px-8 rounded-full shadow-lg border-2 border-white hover:bg-usagi-orange transition-colors flex items-center gap-2">许个愿望 <ArrowRight size={20} /></motion.button>
+              </div>
+            </div>
+            <AnimatePresence>
+              {giftOpen && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                  <motion.div initial={{ scale: 0.5, y: 100 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.5, opacity: 0 }} className="relative bg-gradient-to-br from-usagi-light to-usagi-main p-1 rounded-[2rem] shadow-2xl max-w-sm w-full">
+                    <div className="bg-white rounded-[1.8rem] p-6 text-center border-4 border-dashed border-usagi-orange relative overflow-hidden">
+                      <button onClick={() => setGiftOpen(false)} className="absolute top-2 right-2 p-2 text-usagi-text hover:bg-usagi-pink/20 rounded-full transition-colors"><X size={28} /></button>
+                      <img src={ASSETS.giftImage} alt="Surprise" className="w-full h-48 object-contain mb-4 rounded-lg bg-usagi-light/50" />
+                      <h3 className="text-2xl font-hand font-bold text-usagi-orange mb-2">惊喜!</h3>
+                      <p className="text-lg text-usagi-text font-sans font-medium">{GIFT_SURPRISES.messages[Math.floor(Math.random() * GIFT_SURPRISES.messages.length)]}</p>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
+      };
+
+      // SCENE 4: Cake Interaction (Particle & 3D)
+      const Scene4CakeInteraction = () => {
+        const containerRef = useRef(null);
+        const videoRef = useRef(null);
+        const canvasRef = useRef(null);
+        const rendererRef = useRef(null);
+        const particlesRef = useRef(null);
+        const cameraRef = useRef(null);
+        const controlsRef = useRef(null);
+        const handsRef = useRef(null);
+        const cameraActive = useRef(false);
+        const audioContextRef = useRef(null);
+        const analyserRef = useRef(null);
+        const lastGestureTime = useRef(0);
+        const blowTriggerCount = useRef(0);
+        const audioCheckRaf = useRef(0);
+
+        const [cakeState, setCakeState] = useState('SCATTERED');
+        const [cameraAuthorized, setCameraAuthorized] = useState(false);
+        const [cameraError, setCameraError] = useState(null);
+        const [micActive, setMicActive] = useState(false);
+        const [feedback, setFeedback] = useState(null);
+        const [detectedGesture, setDetectedGesture] = useState('Searching...');
+        const [loading, setLoading] = useState(true);
+        const [handVisible, setHandVisible] = useState(false);
+        const [surpriseActive, setSurpriseActive] = useState(false);
+
+        const CONFIG = {
+          particleCount: 35000,
+          colors: { base: new THREE.Color('#F9D59B'), cream: new THREE.Color('#FFF8E1'), candle: new THREE.Color('#E0C097'), wick: new THREE.Color('#5D4037'), flameCore: new THREE.Color('#FFFFFF'), flameOuter: new THREE.Color('#FBBF77'), heart: new THREE.Color('#FF69B4'), heartGlow: new THREE.Color('#FFC0CB') },
+          thresholds: { pinchDist: 0.04, audioLevel: 15, puckerRatio: 0.75 }
+        };
+
+        useEffect(() => {
+          if (!containerRef.current) return;
+          const scene = new THREE.Scene();
+          const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+          camera.position.set(0, 0, 14); camera.lookAt(0, 0, 0); cameraRef.current = camera;
+          const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          containerRef.current.appendChild(renderer.domElement);
+          rendererRef.current = renderer;
+          const controls = new OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true; controls.dampingFactor = 0.05; controls.autoRotate = true; controls.autoRotateSpeed = 2.0; controls.enableZoom = false; controls.enablePan = false;
+          controlsRef.current = controls;
+
+          // Generate Particles
+          const positions = new Float32Array(CONFIG.particleCount * 3);
+          const targets = new Float32Array(CONFIG.particleCount * 3);
+          const heartTargets = new Float32Array(CONFIG.particleCount * 3);
+          const colors = new Float32Array(CONFIG.particleCount * 3);
+          const sizes = new Float32Array(CONFIG.particleCount);
+          const types = new Float32Array(CONFIG.particleCount);
+          const CAKE_SCALE = 1.5;
+
+          for (let i = 0; i < CONFIG.particleCount; i++) {
+            const i3 = i * 3;
+            // Scattered
+            const r = 25 * Math.cbrt(Math.random()); const theta = Math.random() * Math.PI * 2; const phi = Math.acos(2 * Math.random() - 1);
+            positions[i3] = r * Math.sin(phi) * Math.cos(theta); positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta); positions[i3 + 2] = r * Math.cos(phi);
+            
+            // Cake
+            const rand = Math.random(); let color = new THREE.Color(); let type = 0; let size = Math.random() * 0.5 + 0.8; let tx = 0, ty = 0, tz = 0; const yOffset = -0.5;
+            if (rand < 0.65) {
+              const noise = (Math.random() - 0.5) * 0.1;
+              if (Math.random() > 0.4) { const rad = Math.sqrt(Math.random()) * 3.5; const ang = Math.random() * Math.PI * 2; const h = (Math.random() - 0.5) * 1.5; tx = Math.cos(ang) * rad; ty = h - 1.0; tz = Math.sin(ang) * rad; size = 1.5; }
+              else { const rad = Math.sqrt(Math.random()) * 2.2; const ang = Math.random() * Math.PI * 2; const h = (Math.random() - 0.5) * 1.2; tx = Math.cos(ang) * rad; ty = h + 0.5; tz = Math.sin(ang) * rad; size = 1.4; }
+              color = CONFIG.colors.base.clone().offsetHSL(0, 0, noise);
+            } else if (rand < 0.88) {
+              const rad = Math.sqrt(Math.random()) * 2.3; const ang = Math.random() * Math.PI * 2; let h = 0.5; if (Math.random() > 0.7) h -= Math.random() * 0.6; tx = Math.cos(ang) * rad; ty = h + 1.1; tz = Math.sin(ang) * rad; color = CONFIG.colors.cream; size = 1.6;
+            } else if (rand < 0.97) {
+              const rad = Math.random() * 0.15; const ang = Math.random() * Math.PI * 2; const h = Math.random() * 1.5; tx = Math.cos(ang) * rad; ty = h + 1.8; tz = Math.sin(ang) * rad; color = CONFIG.colors.candle; size = 1.2;
+            } else {
+              if (Math.random() > 0.3) { tx = 0; ty = 3.4 + Math.random() * 0.1; tz = 0; color = CONFIG.colors.wick; type = 1; }
+              else { const rad = Math.random() * 0.2; const ang = Math.random() * Math.PI * 2; const h = Math.random() * 0.5; const shape = (1 - h/0.5); tx = Math.cos(ang) * rad * shape; ty = 3.5 + h; tz = Math.sin(ang) * rad * shape; color = Math.random() > 0.5 ? CONFIG.colors.flameOuter : CONFIG.colors.flameCore; type = 2; size = 2.5; }
+            }
+            tx *= CAKE_SCALE; ty *= CAKE_SCALE; tz *= CAKE_SCALE; ty += yOffset;
+            targets[i3] = tx; targets[i3+1] = ty; targets[i3+2] = tz;
+            colors[i3] = color.r; colors[i3+1] = color.g; colors[i3+2] = color.b; sizes[i] = size; types[i] = type;
+
+            // Heart
+            const t = Math.random() * Math.PI * 2;
+            let hx = 16 * Math.pow(Math.sin(t), 3); let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+            const scale = 0.65; hx *= scale; hy *= scale;
+            const thickness = 0.6; const randR = Math.random() * thickness; const randAng = Math.random() * Math.PI * 2;
+            hx += Math.cos(randAng) * randR; hy += Math.sin(randAng) * randR; const hz = Math.sin(randAng) * randR * 2.0;
+            heartTargets[i3] = hx; heartTargets[i3+1] = hy; heartTargets[i3+2] = hz;
+          }
+
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          geometry.setAttribute('target', new THREE.BufferAttribute(targets, 3));
+          geometry.setAttribute('heartTarget', new THREE.BufferAttribute(heartTargets, 3));
+          geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+          geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+          geometry.setAttribute('aType', new THREE.BufferAttribute(types, 1));
+
+          const material = new THREE.ShaderMaterial({
+            uniforms: {
+              uTime: { value: 0 }, uMorph: { value: 0 }, uHeartMorph: { value: 0 }, uFlameState: { value: 0 },
+              uPixelRatio: { value: renderer.getPixelRatio() }, uHeartColor: { value: CONFIG.colors.heart }, uHeartGlow: { value: CONFIG.colors.heartGlow }
+            },
+            vertexShader: `
+              uniform float uTime; uniform float uMorph; uniform float uHeartMorph; uniform float uFlameState; uniform float uPixelRatio;
+              attribute vec3 target; attribute vec3 heartTarget; attribute float size; attribute vec3 color; attribute float aType;
+              varying vec3 vColor; varying float vAlpha;
+              void main() {
+                vec3 cakePos = mix(position, target, uMorph);
+                vec3 currentPos = mix(cakePos, heartTarget, uHeartMorph);
+                if (uMorph < 1.0 && uHeartMorph < 0.1) { currentPos.x += sin(uTime + position.y) * 0.2 * (1.0 - uMorph); currentPos.z += cos(uTime + position.x) * 0.2 * (1.0 - uMorph); }
+                vColor = color; vAlpha = 1.0;
+                if (aType > 1.5 && uHeartMorph < 0.1) { if (uFlameState < 0.1) { vAlpha = 0.0; } else { float flicker = sin(uTime * 20.0 + position.y * 10.0) * 0.05; currentPos.x += flicker; currentPos.z += flicker; vAlpha = 0.8 + 0.2 * sin(uTime * 15.0); } }
+                vec4 mvPosition = modelViewMatrix * vec4(currentPos, 1.0);
+                gl_Position = projectionMatrix * mvPosition;
+                gl_PointSize = size * 1.5 * uPixelRatio * (25.0 / -mvPosition.z);
+              }
+            `,
+            fragmentShader: `
+              varying vec3 vColor; varying float vAlpha; uniform vec3 uHeartColor; uniform vec3 uHeartGlow; uniform float uHeartMorph;
+              void main() {
+                if (vAlpha < 0.01) discard;
+                vec2 center = gl_PointCoord - 0.5;
+                if (length(center) > 0.5) discard;
+                float glow = 1.0 - (length(center) * 2.0); glow = pow(glow, 2.0);
+                vec3 mixedColor = mix(vColor, uHeartColor, uHeartMorph);
+                if (uHeartMorph > 0.5) { mixedColor = mix(mixedColor, uHeartGlow, glow * 0.5); }
+                gl_FragColor = vec4(mixedColor, vAlpha * glow);
+              }
+            `,
+            transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+          });
+
+          const particles = new THREE.Points(geometry, material);
+          particlesRef.current = particles;
+          scene.add(particles);
+
+          const clock = new THREE.Clock();
+          let rAF = 0;
+          const animate = () => {
+            const time = clock.getElapsedTime();
+            material.uniforms.uTime.value = time;
+            if (material.uniforms.uHeartMorph.value > 0.1) {
+              controls.enabled = false; controls.autoRotate = false;
+              camera.position.lerp(new THREE.Vector3(0, 0, 14), 0.05); camera.lookAt(0, 0, 0);
+              particles.rotation.set(0, 0, 0); particles.scale.set(1, 1, 1);
+            } else {
+              controls.enabled = true; controls.autoRotate = true; controls.update();
+              particles.rotation.set(0,0,0);
+              if (material.uniforms.uMorph.value < 0.1) particles.rotation.y = time * 0.05;
+            }
+            renderer.render(scene, camera);
+            rAF = requestAnimationFrame(animate);
+          };
+          animate();
+          setLoading(false);
+
+          return () => { cancelAnimationFrame(rAF); renderer.dispose(); geometry.dispose(); controls.dispose(); };
+        }, []);
+
+        const triggerAction = useCallback((action) => {
+          if (!particlesRef.current) return;
+          const uniforms = particlesRef.current.material.uniforms;
+          switch (action) {
+            case 'HEART_MODE':
+              setFeedback({icon: <Heart size={40} className="text-pink-500 fill-pink-500" />, text: "Love!"});
+              gsap.to(uniforms.uMorph, { value: 1, duration: 0.5 });
+              gsap.to(uniforms.uHeartMorph, { value: 1, duration: 2.0, ease: "elastic.out(1, 0.5)" });
+              gsap.to(uniforms.uFlameState, { value: 0, duration: 0.5 });
+              break;
+            case 'CAKE_MODE':
+              gsap.to(uniforms.uHeartMorph, { value: 0, duration: 1.5, ease: "power2.inOut" });
+              break;
+            case 'SCATTERED':
+              setFeedback({icon: <Wind size={40} />, text: "Scattered!"});
+              gsap.to(uniforms.uMorph, { value: 0, duration: 1.5, ease: "power2.inOut" });
+              gsap.to(uniforms.uHeartMorph, { value: 0, duration: 1.0 });
+              gsap.to(uniforms.uFlameState, { value: 0, duration: 0.5 });
+              setSurpriseActive(false);
+              break;
+            case 'ASSEMBLED':
+              if (uniforms.uMorph.value < 0.9) {
+                setFeedback({icon: <Hand size={40} />, text: "Assembled!"});
+                gsap.to(uniforms.uMorph, { value: 1, duration: 1.5, ease: "elastic.out(1, 0.8)" });
+                gsap.to(uniforms.uHeartMorph, { value: 0, duration: 1.0 });
+              }
+              break;
+            case 'LIT':
+              setFeedback({icon: <Flame size={40} className="text-orange-500" />, text: "Lit!"});
+              gsap.to(uniforms.uFlameState, { value: 1, duration: 0.5 });
+              break;
+            case 'EXTINGUISH':
+              setFeedback({icon: <Wind size={40} className="text-blue-300" />, text: "Extinguished!"});
+              gsap.to(uniforms.uFlameState, { value: 0, duration: 0.5 });
+              break;
+          }
+          if(feedback) setTimeout(() => setFeedback(null), 2000);
+        }, [feedback]);
+
+        // Hand Logic (Simplified for single file)
+        const onHandResults = (results) => {
+          if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            setHandVisible(true);
+            const lm = results.multiHandLandmarks[0];
+            const isFolded = (tip, pip) => Math.hypot(lm[tip].x - lm[0].x, lm[tip].y - lm[0].y) < Math.hypot(lm[pip].x - lm[0].x, lm[pip].y - lm[0].y);
+            const isFist = [8,12,16,20].every(t => isFolded(t, t-2));
+            const isPeace = !isFolded(8,6) && !isFolded(12,10) && isFolded(16,14) && isFolded(20,18);
+            const isOpen = [8,12,16,20].every(t => !isFolded(t, t-2));
+            const isSnap = Math.hypot(lm[4].x - lm[12].x, lm[4].y - lm[12].y) < 0.04;
+
+            if (isPeace) {
+               if(!surpriseActive) { setSurpriseActive(true); triggerAction('HEART_MODE'); }
+            } else if (surpriseActive && (isOpen || isFist)) {
+               setSurpriseActive(false); setCakeState('ASSEMBLED'); triggerAction('CAKE_MODE');
+            } else if (!surpriseActive) {
+               if(isSnap && cakeState === 'ASSEMBLED') { setCakeState('LIT'); triggerAction('LIT'); setDetectedGesture('SNAP'); }
+               else if(isFist && cakeState === 'SCATTERED') { setCakeState('ASSEMBLED'); triggerAction('ASSEMBLED'); setDetectedGesture('FIST'); }
+               else if(isOpen && cakeState !== 'SCATTERED') { setCakeState('SCATTERED'); triggerAction('SCATTERED'); setDetectedGesture('OPEN'); }
+            }
+          } else { setHandVisible(false); }
+        };
+
+        const startCamera = async () => {
+          if (!window.Hands) return;
+          const hands = new window.Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}` });
+          hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6 });
+          hands.onResults(onHandResults);
+          handsRef.current = hands;
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+              videoRef.current.onloadedmetadata = () => {
+                videoRef.current.play(); cameraActive.current = true; setCameraAuthorized(true);
+                const loop = async () => {
+                  if (cameraActive.current && videoRef.current && handsRef.current) {
+                    await handsRef.current.send({ image: videoRef.current });
+                    requestAnimationFrame(loop);
+                  }
+                };
+                loop();
+              }
+            }
+          } catch(e) { setCameraError("Camera denied"); }
+        };
+
+        const startMic = async () => {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = ctx.createAnalyser();
+            ctx.createMediaStreamSource(stream).connect(analyser);
+            analyser.fftSize = 256;
+            analyserRef.current = analyser; setMicActive(true);
+            const checkAudio = () => {
+              if (analyserRef.current) {
+                const data = new Uint8Array(analyserRef.current.frequencyBinCount);
+                analyserRef.current.getByteFrequencyData(data);
+                let sum = 0; for(let i=0; i<data.length; i++) sum += data[i];
+                if ((sum / data.length) > CONFIG.thresholds.audioLevel) {
+                   blowTriggerCount.current++;
+                   if (blowTriggerCount.current > 3) { triggerAction('EXTINGUISH'); blowTriggerCount.current = 0; }
+                } else blowTriggerCount.current = Math.max(0, blowTriggerCount.current - 1);
+              }
+              audioCheckRaf.current = requestAnimationFrame(checkAudio);
+            };
+            checkAudio();
+          } catch(e) {}
+        };
+
+        return (
+          <div className="relative w-full h-screen bg-black overflow-hidden select-none">
+            <div ref={containerRef} className="absolute inset-0 z-10 cursor-pointer" onClick={() => {
+                if(surpriseActive) { setSurpriseActive(false); setCakeState('ASSEMBLED'); triggerAction('CAKE_MODE'); }
+                else if(cakeState === 'SCATTERED') triggerAction('ASSEMBLED');
+                else if(cakeState === 'ASSEMBLED') triggerAction('LIT');
+                else if(cakeState === 'LIT') triggerAction('EXTINGUISH');
+            }} />
+            <AnimatePresence>
+              {surpriseActive && (
+                <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none px-4">
+                  <div className="text-center relative max-w-full translate-y-16">
+                    <div className="absolute inset-0 bg-pink-500/20 blur-[60px] rounded-full"></div>
+                    <motion.div className="text-6xl md:text-8xl font-black mb-2 tracking-wider relative z-10 font-hand pt-8 pb-4 leading-normal" style={{ background: 'linear-gradient(135deg, #FFE6F2 0%, #FF80B0 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0px 0px 15px rgba(255, 128, 176, 0.8))' }} animate={{ y: [0, -10, 0] }} transition={{ y: { duration: 3, repeat: Infinity, ease: "easeInOut" } }}>小叶同学</motion.div>
+                    <motion.div className="text-5xl md:text-7xl font-bold text-white relative z-10 font-hand mt-2 py-2 leading-relaxed" style={{ textShadow: '0 4px 10px rgba(255, 20, 147, 0.6)' }} animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>生日快乐</motion.div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div className="absolute top-24 right-6 z-40 flex flex-col items-end gap-2">
+              <div className={`relative w-48 aspect-[4/3] rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black/80 transition-opacity duration-500 ${cameraAuthorized ? 'opacity-100' : 'opacity-90'}`}>
+                <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover opacity-60 mirror-x" playsInline muted />
+                {!cameraAuthorized && <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 text-xs"><Camera size={20} /><span>Click Start Camera</span></div>}
+              </div>
+              <div className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 text-xs font-mono text-usagi-orange">ACTION: <span className="font-bold text-white">{detectedGesture}</span></div>
+            </div>
+            <div className="absolute bottom-8 left-8 z-50 w-72 bg-white/10 backdrop-blur-xl p-5 rounded-2xl border border-white/20 text-white shadow-xl">
+              <h3 className="font-bold text-usagi-orange mb-4 flex items-center gap-2 text-lg"><Sparkles size={18} fill="currentColor" /> Magic Controls</h3>
+              <div className="flex flex-col gap-2 mb-4">
+                {!cameraAuthorized && <button onClick={startCamera} className="w-full bg-usagi-main hover:bg-usagi-hover text-usagi-text font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95"><Camera size={18} /> Start Camera</button>}
+                {!micActive && <button onClick={startMic} className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 border border-white/10 transition-colors"><Mic size={18} /> Enable Blow (Mic)</button>}
+              </div>
+              <div className="space-y-2 text-sm text-white/80 bg-black/20 p-3 rounded-xl">
+                <div className="flex justify-between"><span>✌️ Peace</span><span className="font-mono text-xs opacity-70 text-pink-300 font-bold">SURPRISE!</span></div>
+                <div className="flex justify-between"><span>✊ Fist</span><span className="font-mono text-xs opacity-70">ASSEMBLE</span></div>
+                <div className="flex justify-between"><span>✋ Open</span><span className="font-mono text-xs opacity-70">SCATTER</span></div>
+                <div className="flex justify-between"><span>🤌 Pinch</span><span className="font-mono text-xs opacity-70">LIGHT FLAME</span></div>
+                <div className="flex justify-between"><span>🌬️ Blow</span><span className="font-mono text-xs opacity-70">EXTINGUISH</span></div>
+              </div>
+            </div>
+            {feedback && <motion.div initial={{ opacity: 0, scale: 0.5, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: -20 }} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] flex flex-col items-center gap-3 pointer-events-none"><div className="p-8 bg-black/70 backdrop-blur-lg rounded-full text-white shadow-2xl border-4 border-white/10">{feedback.icon}</div><span className="text-white font-bold text-2xl text-shadow-lg tracking-wide bg-black/40 px-4 py-1 rounded-lg backdrop-blur">{feedback.text}</span></motion.div>}
+          </div>
+        );
+      };
+
+      // SCENE 5: Outro
+      const Scene5Outro = () => {
+        const [message, setMessage] = useState("Wishing you happiness every day!");
+        const [isEditing, setIsEditing] = useState(false);
+        const captureRef = useRef(null);
+        const [captured, setCaptured] = useState(false);
+        const handleCapture = async () => {
+          if (captureRef.current) {
+            setCaptured(true);
+            try {
+              const canvas = await html2canvas(captureRef.current, { backgroundColor: null, scale: 2, useCORS: true });
+              const link = document.createElement('a'); link.download = 'usagi-birthday-wish.png'; link.href = canvas.toDataURL('image/png'); link.click();
+            } catch (err) {}
+            setCaptured(false);
+          }
+        };
+        return (
+          <div className="w-full h-full flex flex-col items-center justify-center p-4 z-40 relative">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0"><div className="absolute top-20 left-10 text-6xl opacity-60 rotate-12 animate-bounce-slow">🥕</div><div className="absolute top-32 right-20 text-5xl opacity-50 -rotate-12 animate-pulse">✨</div></div>
+            <div ref={captureRef} className="relative flex flex-col items-center justify-center p-12 rounded-[3rem] w-full max-w-3xl z-10">
+              <div className="absolute inset-0 bg-[#F9D59B]/20 backdrop-blur-[2px] rounded-[3rem] border-4 border-white/40 -z-10"></div>
+              <div className="w-72 h-72 md:w-96 md:h-96 relative filter drop-shadow-xl"><UsagiCharacter action="hold-board" className="w-full h-full" boardText={message} /></div>
+            </div>
+            <div className="mt-8 w-full max-w-md bg-white/95 backdrop-blur rounded-3xl p-6 shadow-2xl border-4 border-usagi-main z-50">
+              {isEditing ? (
+                <div className="flex flex-col gap-4"><textarea value={message} onChange={(e) => setMessage(e.target.value)} className="w-full p-4 border-2 border-usagi-orange rounded-2xl font-hand text-2xl" rows={3} /><button onClick={() => setIsEditing(false)} className="bg-usagi-main text-usagi-text font-bold py-3 rounded-xl hover:bg-usagi-orange">Update Board ✨</button></div>
+              ) : (
+                <div className="flex justify-between items-center gap-3"><button onClick={() => setIsEditing(true)} className="flex-1 flex items-center justify-center gap-2 bg-usagi-light text-usagi-text py-4 rounded-2xl border-2 border-usagi-main hover:bg-white"><PenTool size={20} /> Edit Wish</button><button onClick={handleCapture} className="flex-1 flex items-center justify-center gap-2 bg-usagi-pink text-white py-4 rounded-2xl shadow-md border-2 border-white"><Download size={20} /> Save Card</button></div>
+              )}
+            </div>
+            {captured && <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="fixed bottom-24 bg-usagi-text text-white px-8 py-4 rounded-full shadow-2xl z-[60] font-bold text-xl flex items-center gap-2"><span>📸</span> Saved!</motion.div>}
+          </div>
+        );
+      };
+
+      // --- APP ROOT ---
+      const App = () => {
+        const [scene, setScene] = useState('INTRO');
+        const [muted, setMuted] = useState(false);
+        const audioRef = useRef(null);
+        useEffect(() => { audioRef.current = new Audio(ASSETS.sounds.bgm); audioRef.current.loop = true; audioRef.current.volume = 0.4; }, []);
+        const toggleAudio = () => { if(audioRef.current) { audioRef.current.volume = muted ? 0.4 : 0; setMuted(!muted); } };
+        const start = () => { audioRef.current?.play().catch(()=>{}); setScene('PHOTO_WALL'); };
+        const back = () => { if(scene==='PHOTO_WALL') setScene('INTRO'); if(scene==='WISHES') setScene('PHOTO_WALL'); if(scene==='CAKE') setScene('WISHES'); if(scene==='OUTRO') setScene('WISHES'); };
+
+        return (
+          <div className="relative min-h-screen font-sans text-usagi-text overflow-hidden selection:bg-usagi-pink selection:text-white">
+            <Background />
+            <div className="fixed top-4 right-4 z-50"><button onClick={toggleAudio} className="bg-white/80 p-3 rounded-full shadow-md hover:bg-white border border-usagi-main">{muted ? <VolumeX size={24}/> : <Volume2 size={24}/>}</button></div>
+            <BackButton onClick={back} disabled={scene==='INTRO'} />
+            <AnimatePresence mode="wait">
+              {scene === 'INTRO' && <Scene1Intro key="intro" onStart={start} />}
+            </AnimatePresence>
+            {scene !== 'INTRO' && <div className={`absolute inset-0 z-0 flex items-center justify-center transition-opacity duration-500 ${scene==='CAKE'?'opacity-20':'opacity-100'}`}><Scene2PhotoWall isActive={scene==='PHOTO_WALL'} onNext={()=>setScene('WISHES')} showButton={scene==='PHOTO_WALL'} isBackgroundMode={scene!=='PHOTO_WALL'} /></div>}
+            <AnimatePresence>
+              {scene === 'WISHES' && <motion.div key="wishes" className="absolute inset-0 z-10" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><Scene3Wishes onGoToCakeInteraction={()=>setScene('CAKE')} onGoToOutro={()=>setScene('OUTRO')} /></motion.div>}
+              {scene === 'CAKE' && <motion.div key="cake" className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><Scene4CakeInteraction /></motion.div>}
+              {scene === 'OUTRO' && <motion.div key="outro" className="absolute inset-0 z-20" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><Scene5Outro /></motion.div>}
+            </AnimatePresence>
+          </div>
+        );
+      };
+
+      const root = createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
