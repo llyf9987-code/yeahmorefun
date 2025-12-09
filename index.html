@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -8,8 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600&family=Zeyada&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     
-    <!-- MediaPipe Hands (Pinned Version) -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js" crossorigin="anonymous"></script>
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     
     <!-- Babel for in-browser compilation -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -47,28 +46,23 @@
       .mirror-x { transform: scaleX(-1); }
     </style>
     
-    <!-- Import Maps: Fixed to prevent version conflicts -->
     <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "framer-motion": "https://esm.sh/framer-motion@10.16.4?deps=react@18.2.0,react-dom@18.2.0",
-    "lucide-react": "https://esm.sh/lucide-react@0.292.0?deps=react@18.2.0",
-    "three": "https://esm.sh/three@0.160.0",
-    "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/",
-    "gsap": "https://esm.sh/gsap@3.12.5",
-    "canvas-confetti": "https://esm.sh/canvas-confetti@1.9.2",
-    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "three/": "https://aistudiocdn.com/three@^0.181.2/"
-  }
-}
-</script>
-  <link rel="stylesheet" href="/index.css">
-</head>
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom": "https://esm.sh/react-dom@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "framer-motion": "https://esm.sh/framer-motion@10.16.4?deps=react@18.2.0,react-dom@18.2.0",
+        "lucide-react": "https://esm.sh/lucide-react@0.292.0?deps=react@18.2.0,react-dom@18.2.0",
+        "three": "https://esm.sh/three@0.160.0",
+        "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/",
+        "gsap": "https://esm.sh/gsap@3.12.5",
+        "canvas-confetti": "https://esm.sh/canvas-confetti@1.9.2",
+        "html2canvas": "https://esm.sh/html2canvas@1.4.1"
+      }
+    }
+    </script>
+  </head>
   <body class="custom-cursor">
     <div id="root"></div>
 
@@ -97,9 +91,6 @@
         giftImage: 'https://via.placeholder.com/300x300.png?text=Surprise!',
         sounds: {
           bgm: 'https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg',
-          usagiCall: 'https://commondatastorage.googleapis.com/codeskulptor-assets/week7-brrring.m4a',
-          fireStart: 'https://commondatastorage.googleapis.com/codeskulptor-assets/sounddogs/thrust.mp3',
-          blowAir: 'https://commondatastorage.googleapis.com/codeskulptor-assets/sounddogs/missile.mp3'
         }
       };
 
@@ -349,16 +340,15 @@
       const Scene4CakeInteraction = () => {
         const containerRef = useRef(null);
         const videoRef = useRef(null);
-        const canvasRef = useRef(null);
         const rendererRef = useRef(null);
         const particlesRef = useRef(null);
         const cameraRef = useRef(null);
         const controlsRef = useRef(null);
         const handsRef = useRef(null);
+        const streamRef = useRef(null);
         const cameraActive = useRef(false);
-        const audioContextRef = useRef(null);
         const analyserRef = useRef(null);
-        const lastGestureTime = useRef(0);
+        const lastActionTime = useRef(0);
         const blowTriggerCount = useRef(0);
         const audioCheckRaf = useRef(0);
 
@@ -368,15 +358,42 @@
         const [micActive, setMicActive] = useState(false);
         const [feedback, setFeedback] = useState(null);
         const [detectedGesture, setDetectedGesture] = useState('Searching...');
-        const [loading, setLoading] = useState(true);
         const [handVisible, setHandVisible] = useState(false);
         const [surpriseActive, setSurpriseActive] = useState(false);
 
-        const CONFIG = {
+        // Keep a ref of current state for callbacks (Stale closure fix)
+        const stateRef = useRef({ cakeState, surpriseActive });
+        useEffect(() => { stateRef.current = { cakeState, surpriseActive }; }, [cakeState, surpriseActive]);
+
+        // Cleanup function - Memoized to be used in both useEffect cleanup and startCamera
+        const stopCamera = useCallback(() => {
+             cameraActive.current = false;
+             
+             // Stop all tracks in the stored stream
+             if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => {
+                    try { track.stop(); } catch(e) {}
+                });
+                streamRef.current = null;
+             }
+             
+             // Disconnect video element
+             if (videoRef.current) {
+                videoRef.current.srcObject = null;
+             }
+             
+             // Close Hands instance
+             if (handsRef.current) {
+                try { handsRef.current.close(); } catch(e) {}
+                handsRef.current = null;
+             }
+        }, []);
+
+        const CONFIG = useMemo(() => ({
           particleCount: 35000,
           colors: { base: new THREE.Color('#F9D59B'), cream: new THREE.Color('#FFF8E1'), candle: new THREE.Color('#E0C097'), wick: new THREE.Color('#5D4037'), flameCore: new THREE.Color('#FFFFFF'), flameOuter: new THREE.Color('#FBBF77'), heart: new THREE.Color('#FF69B4'), heartGlow: new THREE.Color('#FFC0CB') },
-          thresholds: { pinchDist: 0.04, audioLevel: 15, puckerRatio: 0.75 }
-        };
+          thresholds: { pinchDist: 0.05, audioLevel: 15 }
+        }), []);
 
         useEffect(() => {
           if (!containerRef.current) return;
@@ -500,10 +517,16 @@
             rAF = requestAnimationFrame(animate);
           };
           animate();
-          setLoading(false);
 
-          return () => { cancelAnimationFrame(rAF); renderer.dispose(); geometry.dispose(); controls.dispose(); };
-        }, []);
+          // Cleanup using the stable stopCamera reference
+          return () => { 
+            cancelAnimationFrame(rAF); 
+            if(rendererRef.current) rendererRef.current.dispose(); 
+            if(geometry) geometry.dispose(); 
+            if(controlsRef.current) controlsRef.current.dispose(); 
+            stopCamera(); 
+          };
+        }, [stopCamera, CONFIG]);
 
         const triggerAction = useCallback((action) => {
           if (!particlesRef.current) return;
@@ -544,51 +567,149 @@
           if(feedback) setTimeout(() => setFeedback(null), 2000);
         }, [feedback]);
 
-        // Hand Logic (Simplified for single file)
         const onHandResults = (results) => {
-          if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            setHandVisible(true);
-            const lm = results.multiHandLandmarks[0];
-            const isFolded = (tip, pip) => Math.hypot(lm[tip].x - lm[0].x, lm[tip].y - lm[0].y) < Math.hypot(lm[pip].x - lm[0].x, lm[pip].y - lm[0].y);
-            const isFist = [8,12,16,20].every(t => isFolded(t, t-2));
-            const isPeace = !isFolded(8,6) && !isFolded(12,10) && isFolded(16,14) && isFolded(20,18);
-            const isOpen = [8,12,16,20].every(t => !isFolded(t, t-2));
-            const isSnap = Math.hypot(lm[4].x - lm[12].x, lm[4].y - lm[12].y) < 0.04;
+          // Read latest state from ref
+          const { cakeState: currentCakeState, surpriseActive: currentSurpriseActive } = stateRef.current;
 
-            if (isPeace) {
-               if(!surpriseActive) { setSurpriseActive(true); triggerAction('HEART_MODE'); }
-            } else if (surpriseActive && (isOpen || isFist)) {
-               setSurpriseActive(false); setCakeState('ASSEMBLED'); triggerAction('CAKE_MODE');
-            } else if (!surpriseActive) {
-               if(isSnap && cakeState === 'ASSEMBLED') { setCakeState('LIT'); triggerAction('LIT'); setDetectedGesture('SNAP'); }
-               else if(isFist && cakeState === 'SCATTERED') { setCakeState('ASSEMBLED'); triggerAction('ASSEMBLED'); setDetectedGesture('FIST'); }
-               else if(isOpen && cakeState !== 'SCATTERED') { setCakeState('SCATTERED'); triggerAction('SCATTERED'); setDetectedGesture('OPEN'); }
-            }
-          } else { setHandVisible(false); }
+          if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+             setHandVisible(false);
+             setDetectedGesture('No Hand');
+             return;
+          }
+
+          setHandVisible(true);
+          const lm = results.multiHandLandmarks[0];
+
+          // 1. Helpers
+          const getDist = (p1, p2) => Math.hypot(lm[p1].x - lm[p2].x, lm[p1].y - lm[p2].y);
+          
+          // 2. Finger States
+          const isFingerFolded = (tip, pip) => getDist(tip, 0) < getDist(pip, 0); 
+
+          const indexFolded = isFingerFolded(8, 6);
+          const middleFolded = isFingerFolded(12, 10);
+          const ringFolded = isFingerFolded(16, 14);
+          const pinkyFolded = isFingerFolded(20, 18);
+          // Thumb is folded if tip is close to Pinky MCP (17) or Index MCP (5)
+          const thumbFolded = getDist(4, 17) < 0.15 || getDist(4, 5) < 0.1;
+
+          // 3. Gesture Definitions
+          const isPinch = getDist(4, 8) < CONFIG.thresholds.pinchDist; 
+          const isPeace = !indexFolded && !middleFolded && ringFolded && pinkyFolded;
+          const foldedCount = [indexFolded, middleFolded, ringFolded, pinkyFolded].filter(Boolean).length;
+          const isFist = foldedCount >= 3 && !isPinch;
+          const isOpen = foldedCount <= 1 && !isPinch;
+
+          let currentGesture = 'Unknown';
+          if (isPeace) currentGesture = 'PEACE';
+          else if (isPinch) currentGesture = 'PINCH';
+          else if (isFist) currentGesture = 'FIST';
+          else if (isOpen) currentGesture = 'OPEN';
+          setDetectedGesture(currentGesture);
+
+          // 4. State Machine with Debounce
+          const now = Date.now();
+          if (now - lastActionTime.current < 800) return; // Debounce actions
+
+          if (isPeace && !currentSurpriseActive) {
+            setSurpriseActive(true);
+            triggerAction('HEART_MODE');
+            lastActionTime.current = now;
+            return;
+          }
+
+          if (currentSurpriseActive) {
+             if (isFist || isOpen) {
+               setSurpriseActive(false);
+               setCakeState('ASSEMBLED');
+               triggerAction('CAKE_MODE');
+               lastActionTime.current = now;
+             }
+             return;
+          }
+
+          // Normal Flow
+          if (currentCakeState === 'SCATTERED' && isFist) {
+             setCakeState('ASSEMBLED');
+             triggerAction('ASSEMBLED');
+             lastActionTime.current = now;
+          } else if (currentCakeState === 'ASSEMBLED' && isPinch) {
+             setCakeState('LIT');
+             triggerAction('LIT');
+             lastActionTime.current = now;
+          } else if (currentCakeState !== 'SCATTERED' && isOpen) {
+             if (getDist(4,8) > 0.1) { 
+               setCakeState('SCATTERED');
+               triggerAction('SCATTERED');
+               lastActionTime.current = now;
+             }
+          }
         };
 
         const startCamera = async () => {
-          if (!window.Hands) return;
-          const hands = new window.Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}` });
-          hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6 });
-          hands.onResults(onHandResults);
-          handsRef.current = hands;
+          if (cameraActive.current) return;
+          stopCamera(); // Force cleanup before start
+          
           try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
-            if (videoRef.current) {
-              videoRef.current.srcObject = stream;
-              videoRef.current.onloadedmetadata = () => {
-                videoRef.current.play(); cameraActive.current = true; setCameraAuthorized(true);
-                const loop = async () => {
-                  if (cameraActive.current && videoRef.current && handsRef.current) {
-                    await handsRef.current.send({ image: videoRef.current });
-                    requestAnimationFrame(loop);
+              if (!window.Hands) throw new Error("MediaPipe Hands not loaded");
+
+              const hands = new window.Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+              hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+              hands.onResults(onHandResults);
+              handsRef.current = hands;
+
+              // Retry logic for camera stream
+              const getStream = async (tries) => {
+                  try {
+                     return await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+                  } catch (err) {
+                     if (tries > 0 && (err.name === 'NotReadableError' || err.name === 'TrackStartError')) {
+                         console.warn("Camera busy, retrying in 1s...");
+                         await new Promise(r => setTimeout(r, 1000));
+                         return getStream(tries - 1);
+                     }
+                     throw err;
                   }
-                };
-                loop();
+              };
+
+              // Try getting the stream (retry once if busy)
+              const stream = await getStream(1);
+              streamRef.current = stream;
+              
+              if (videoRef.current) {
+                  videoRef.current.srcObject = stream;
+                  
+                  await new Promise((resolve) => {
+                      if (videoRef.current.readyState >= 1) resolve();
+                      else videoRef.current.onloadedmetadata = () => resolve();
+                  });
+                  await videoRef.current.play();
+                  
+                  cameraActive.current = true;
+                  setCameraAuthorized(true);
+                  setCameraError(null);
+
+                  const loop = async () => {
+                      if (!cameraActive.current || !videoRef.current || !handsRef.current) return;
+                      // Safe send
+                      if(videoRef.current.readyState === 4 && !videoRef.current.paused && !videoRef.current.ended) {
+                        try {
+                           await handsRef.current.send({ image: videoRef.current });
+                        } catch(e) { /* ignore tracking errors */ }
+                      }
+                      if (cameraActive.current) requestAnimationFrame(loop);
+                  };
+                  loop();
               }
-            }
-          } catch(e) { setCameraError("Camera denied"); }
+          } catch (e) {
+              console.error(e);
+              let msg = "Camera denied";
+              if (e.name === 'NotReadableError' || e.name === 'TrackStartError') msg = "Camera in use. Please close other apps.";
+              else if (e.name === 'NotAllowedError') msg = "Permission denied";
+              setCameraError(msg);
+              cameraActive.current = false;
+              stopCamera();
+          }
         };
 
         const startMic = async () => {
@@ -606,7 +727,10 @@
                 let sum = 0; for(let i=0; i<data.length; i++) sum += data[i];
                 if ((sum / data.length) > CONFIG.thresholds.audioLevel) {
                    blowTriggerCount.current++;
-                   if (blowTriggerCount.current > 3) { triggerAction('EXTINGUISH'); blowTriggerCount.current = 0; }
+                   if (blowTriggerCount.current > 10) { 
+                      triggerAction('EXTINGUISH'); 
+                      blowTriggerCount.current = 0; 
+                   }
                 } else blowTriggerCount.current = Math.max(0, blowTriggerCount.current - 1);
               }
               audioCheckRaf.current = requestAnimationFrame(checkAudio);
@@ -637,9 +761,12 @@
             <div className="absolute top-24 right-6 z-40 flex flex-col items-end gap-2">
               <div className={`relative w-48 aspect-[4/3] rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black/80 transition-opacity duration-500 ${cameraAuthorized ? 'opacity-100' : 'opacity-90'}`}>
                 <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover opacity-60 mirror-x" playsInline muted />
-                {!cameraAuthorized && <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 text-xs"><Camera size={20} /><span>Click Start Camera</span></div>}
+                {!cameraAuthorized && !cameraError && <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 text-xs"><Camera size={20} /><span>Click Start Camera</span></div>}
+                {cameraError && <div className="absolute inset-0 flex flex-col items-center justify-center text-red-400 bg-black/80 text-center p-2"><XCircle size={24} /><span className="text-xs font-bold mt-1">{cameraError}</span></div>}
               </div>
-              <div className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 text-xs font-mono text-usagi-orange">ACTION: <span className="font-bold text-white">{detectedGesture}</span></div>
+              <div className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 text-xs font-mono text-usagi-orange">
+                 GESTURE: <span className="font-bold text-white uppercase">{detectedGesture}</span>
+              </div>
             </div>
             <div className="absolute bottom-8 left-8 z-50 w-72 bg-white/10 backdrop-blur-xl p-5 rounded-2xl border border-white/20 text-white shadow-xl">
               <h3 className="font-bold text-usagi-orange mb-4 flex items-center gap-2 text-lg"><Sparkles size={18} fill="currentColor" /> Magic Controls</h3>
@@ -648,11 +775,11 @@
                 {!micActive && <button onClick={startMic} className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 border border-white/10 transition-colors"><Mic size={18} /> Enable Blow (Mic)</button>}
               </div>
               <div className="space-y-2 text-sm text-white/80 bg-black/20 p-3 rounded-xl">
-                <div className="flex justify-between"><span>✌️ Peace</span><span className="font-mono text-xs opacity-70 text-pink-300 font-bold">SURPRISE!</span></div>
-                <div className="flex justify-between"><span>✊ Fist</span><span className="font-mono text-xs opacity-70">ASSEMBLE</span></div>
-                <div className="flex justify-between"><span>✋ Open</span><span className="font-mono text-xs opacity-70">SCATTER</span></div>
-                <div className="flex justify-between"><span>🤌 Pinch</span><span className="font-mono text-xs opacity-70">LIGHT FLAME</span></div>
-                <div className="flex justify-between"><span>🌬️ Blow</span><span className="font-mono text-xs opacity-70">EXTINGUISH</span></div>
+                <div className="flex justify-between items-center"><span className="flex items-center gap-2">✌️ Peace</span><span className="font-mono text-[10px] bg-pink-500/20 px-1 rounded text-pink-300">SURPRISE!</span></div>
+                <div className="flex justify-between items-center"><span className="flex items-center gap-2">✊ Fist</span><span className="font-mono text-[10px] bg-white/10 px-1 rounded">ASSEMBLE</span></div>
+                <div className="flex justify-between items-center"><span className="flex items-center gap-2">✋ Open</span><span className="font-mono text-[10px] bg-white/10 px-1 rounded">SCATTER</span></div>
+                <div className="flex justify-between items-center"><span className="flex items-center gap-2">👌 Pinch</span><span className="font-mono text-[10px] bg-orange-500/20 px-1 rounded text-orange-300">LIGHT FLAME</span></div>
+                <div className="flex justify-between items-center"><span className="flex items-center gap-2">🌬️ Blow</span><span className="font-mono text-[10px] bg-blue-500/20 px-1 rounded text-blue-300">EXTINGUISH</span></div>
               </div>
             </div>
             {feedback && <motion.div initial={{ opacity: 0, scale: 0.5, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: -20 }} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] flex flex-col items-center gap-3 pointer-events-none"><div className="p-8 bg-black/70 backdrop-blur-lg rounded-full text-white shadow-2xl border-4 border-white/10">{feedback.icon}</div><span className="text-white font-bold text-2xl text-shadow-lg tracking-wide bg-black/40 px-4 py-1 rounded-lg backdrop-blur">{feedback.text}</span></motion.div>}
@@ -726,6 +853,5 @@
       const root = createRoot(document.getElementById('root'));
       root.render(<App />);
     </script>
-  <script type="module" src="/index.tsx"></script>
-</body>
+  </body>
 </html>
