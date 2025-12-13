@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Happy Birthday Xiao Ye! | Usagi Wishes</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600&family=Zeyada&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600&family=Zeyada&family=ZCOOL+KuaiLe&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
     <!-- MediaPipe Hands -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js" crossorigin="anonymous"></script>
@@ -21,18 +21,28 @@
               usagi: {
                 main: '#F9D59B', orange: '#FBBF77', gold: '#F8C860',
                 pink: '#F8C8DC', text: '#5D4037', light: '#FFFBE6', hover: '#F7C070',
-                cream: '#FFF9E6'
+                cream: '#FFF9E6', wood: '#8D6E63', woodDark: '#5D4037'
+              },
+              vinyl: {
+                bg: '#1a1510',
+                gold: '#C5A059',
+                goldDim: '#6b5735',
+                text: '#E8DCC5'
               }
             },
             fontFamily: {
               sans: ['Fredoka', 'sans-serif'],
               hand: ['Zeyada', 'cursive'],
               cute: ['"ZCOOL KuaiLe"', 'cursive'],
+              serif: ['"Playfair Display"', 'serif'],
             },
             animation: {
               'float': 'float 3s ease-in-out infinite',
               'bounce-slow': 'bounce 2s infinite',
               'drift': 'drift 10s linear infinite',
+              'spin-slow': 'spin 8s linear infinite',
+              'spin-vinyl': 'spin 4s linear infinite',
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             },
             keyframes: {
               float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
@@ -41,6 +51,8 @@
             boxShadow: {
               'soft': '0 8px 32px rgba(93, 64, 55, 0.15)',
               'glow': '0 0 15px rgba(240, 98, 146, 0.5)',
+              'vinyl': '0 4px 15px rgba(0,0,0,0.6), inset 0 0 0 2px #111, inset 0 0 0 10px #333',
+              'gold-glow': '0 0 20px rgba(197, 160, 89, 0.3)',
             }
           }
         }
@@ -75,6 +87,36 @@
       .btn-text-stroke {
         text-shadow: 1px 1px 0px rgba(160, 80, 0, 0.3);
       }
+
+      /* Vinyl Record Texture */
+      .vinyl-grooves {
+        background: 
+          repeating-radial-gradient(
+            #111 0, 
+            #111 2px, 
+            #181818 3px, 
+            #181818 4px
+          );
+      }
+      .vinyl-shine {
+        background: conic-gradient(
+          rgba(255,255,255,0) 0%,
+          rgba(255,255,255,0.05) 20%,
+          rgba(255,255,255,0) 25%,
+          rgba(255,255,255,0) 45%,
+          rgba(255,255,255,0.08) 50%,
+          rgba(255,255,255,0) 55%,
+          rgba(255,255,255,0) 70%,
+          rgba(255,255,255,0.05) 80%,
+          rgba(255,255,255,0) 100%
+        );
+      }
+      
+      /* Lyrics Scroll Mask */
+      .lyrics-mask {
+        mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+      }
     </style>
     
     <!-- Import Maps: Fixed to prevent version conflicts -->
@@ -102,8 +144,8 @@
     <script type="text/babel" data-presets="react,typescript" data-type="module">
       import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
       import { createRoot } from 'react-dom/client';
-      import { motion, AnimatePresence } from 'framer-motion';
-      import { Volume2, VolumeX, ArrowLeft, X, ArrowRight, Camera, Mic, Flame, Wind, Hand, RefreshCw, XCircle, Heart, Sparkles, Download, Share2, PenTool, AlertCircle, User, Lock, Eye, EyeOff, MessageCircle, Bell, ChevronLeft } from 'lucide-react';
+      import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+      import { Volume2, VolumeX, ArrowLeft, X, ArrowRight, Camera, Mic, Flame, Wind, Hand, RefreshCw, XCircle, Heart, Sparkles, Download, Share2, PenTool, AlertCircle, User, Lock, Eye, EyeOff, MessageCircle, Bell, ChevronLeft, Disc, Music, Play, Pause, SkipBack, SkipForward, Cloud } from 'lucide-react';
       import * as THREE from 'three';
       import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
       import gsap from 'gsap';
@@ -114,6 +156,9 @@
       const RECIPIENT_NAME = "小叶";
       const SENDER_NAME = "Best Friend";
       
+      // Fixed: Use a stable MP3 URL (Pachelbel's Canon) to prevent "no supported source" errors
+      const AUDIO_URL = "https://ia800501.us.archive.org/11/items/pachelbel-canon-in-d/Pachelbel%27s%20Canon%20in%20D.mp3"; 
+      
       const ASSETS = {
         balloons: [
           './images/balloon1.png',
@@ -121,10 +166,10 @@
           './images/balloon3.png'
         ],
         giftImage: './images/usagi-surprise.png',
-        // Updated to external URL as requested
         loginBackground: 'https://xland.eu.org/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251211/js6e/1922X1074/background.jpg', 
         sounds: {
-          bgm: 'https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg',
+          // Fixed: Use a stable MP3 for better browser compatibility
+          bgm: 'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/ccCommunity/Kai_Engel/Satin/Kai_Engel_-_04_-_Sentinel.mp3',
         }
       };
 
@@ -134,9 +179,23 @@
       暴富、开心、健康！
       所有美好如期而至~`;
 
-      const GIFT_SURPRISES = {
-        messages: ["🌸 桃花朵朵开!", "✨ 今天你发光!", "🥕 零食吃不胖!", "💰 暴富在路上!", "💤 天天睡好觉!"]
-      };
+      // Mock Lyrics Data
+      const LYRICS = [
+        { time: 0, text: "Wait for the music..." },
+        { time: 2, text: "Happy Birthday, dear Xiao Ye" },
+        { time: 6, text: "Another year has passed away" },
+        { time: 10, text: "But you shine brighter every day" },
+        { time: 14, text: "Like the sun in the month of May" },
+        { time: 18, text: "May your dreams take flight and soar" },
+        { time: 24, text: "Higher than they've been before" },
+        { time: 30, text: "Happiness knocking at your door" },
+        { time: 36, text: "Wishing you this and so much more" },
+        { time: 42, text: "Stay happy, stay cute, stay you" },
+        { time: 48, text: "All your wishes will come true" },
+        { time: 54, text: "We love you! ❤️" },
+        { time: 60, text: "..." },
+        { time: 100, text: "..." },
+      ];
 
       const PHOTOS = [
         { id: 1, url: 'https://picsum.photos/800/800?random=11', rotation: -3 },
@@ -152,6 +211,432 @@
 
       // --- 2. COMPONENTS ---
 
+      // Light Overlay Component
+      const LightOverlay = () => {
+        const lights = useMemo(() => Array.from({ length: 6 }).map((_, i) => ({
+          id: i,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          scale: Math.random() * 0.5 + 0.8,
+          duration: Math.random() * 10 + 20,
+        })), []);
+
+        return (
+          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+            {lights.map(l => (
+              <motion.div
+                key={l.id}
+                className="absolute rounded-full bg-yellow-200/20 blur-[80px]"
+                style={{
+                  left: `${l.x}%`,
+                  top: `${l.y}%`,
+                  width: '40vw',
+                  height: '40vw',
+                }}
+                animate={{
+                  x: [0, 50, -50, 0],
+                  y: [0, -50, 50, 0],
+                  scale: [l.scale, l.scale * 1.2, l.scale]
+                }}
+                transition={{
+                  duration: l.duration,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            ))}
+          </div>
+        );
+      };
+
+      // Scene Decorations (Grass & Clouds)
+      const SceneDecorations = () => {
+        return (
+          <>
+             {/* Clouds - Top Layer */}
+             <div className="absolute top-0 w-full z-10 pointer-events-none opacity-80">
+                <motion.div 
+                   animate={{ x: [-20, 20, -20] }} 
+                   transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                   className="absolute top-10 left-10 text-white/40"
+                >
+                   <Cloud size={120} fill="currentColor" className="drop-shadow-lg" />
+                </motion.div>
+                <motion.div 
+                   animate={{ x: [20, -20, 20] }} 
+                   transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+                   className="absolute top-24 right-20 text-white/30"
+                >
+                   <Cloud size={90} fill="currentColor" className="drop-shadow-md" />
+                </motion.div>
+                <motion.div 
+                   animate={{ x: [-10, 10, -10] }} 
+                   transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+                   className="absolute top-5 left-1/2 text-white/20"
+                >
+                   <Cloud size={150} fill="currentColor" className="drop-shadow-xl" />
+                </motion.div>
+             </div>
+
+             {/* Grass - Bottom Layer */}
+             <div className="absolute bottom-0 w-full h-32 z-10 pointer-events-none opacity-60">
+                <svg viewBox="0 0 1440 320" className="absolute bottom-0 w-full h-full text-green-700/20" preserveAspectRatio="none">
+                   <path fill="currentColor" fillOpacity="1" d="M0,224L48,213.3C96,203,192,181,288,181.3C384,181,480,203,576,224C672,245,768,267,864,261.3C960,256,1056,224,1152,197.3C1248,171,1344,149,1392,138.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                </svg>
+                <svg viewBox="0 0 1440 320" className="absolute bottom-0 w-full h-full text-green-500/30" preserveAspectRatio="none" style={{ transform: 'scaleX(-1)' }}>
+                   <path fill="currentColor" fillOpacity="1" d="M0,192L48,208C96,224,192,256,288,245.3C384,235,480,181,576,170.7C672,160,768,192,864,208C960,224,1056,224,1152,202.7C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                </svg>
+             </div>
+          </>
+        );
+      };
+
+      // Mini Countdown Component
+      const MiniCountdown = () => {
+         return (
+            <div className="absolute top-6 right-6 z-50 pointer-events-none">
+               <motion.div 
+                  initial={{ y: -50, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 1, type: "spring" }}
+                  className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-2xl shadow-lg border-2 border-usagi-orange/50 transform rotate-3"
+               >
+                  <span className="font-hand text-xl text-usagi-text font-bold">
+                     距离生日还有 <span className="text-2xl text-usagi-orange">0</span> 天✨
+                  </span>
+               </motion.div>
+            </div>
+         );
+      };
+
+      // Back Button
+      const BackButton = ({ onClick, disabled = false }) => {
+        const [isAnimating, setIsAnimating] = useState(false);
+
+        const handleClick = (e) => {
+          // Prevent potential event bubbling or default behaviors causing errors
+          if (e && e.stopPropagation) e.stopPropagation();
+          
+          if (disabled || isAnimating) return;
+          
+          setIsAnimating(true);
+          
+          // Wait for the pull-down animation to perform before navigating
+          setTimeout(() => {
+             onClick();
+             // Reset animation state shortly after navigation starts
+             setTimeout(() => setIsAnimating(false), 200);
+          }, 600);
+        };
+
+        return (
+          <motion.div 
+            className="fixed top-0 left-6 z-[60] flex flex-col items-center"
+            initial={{ y: -200, opacity: 0 }} 
+            animate={{ 
+               y: disabled ? -200 : 0, 
+               opacity: disabled ? 0 : 1,
+               pointerEvents: disabled ? 'none' : 'auto'
+            }} 
+            transition={{ duration: 0.8, type: "spring", stiffness: 60 }}
+          >
+            {/* The String (Visual only) */}
+            <div className="w-[1.5px] h-10 bg-[#8D6E63]/60 shadow-sm relative z-0 origin-top"></div>
+
+            {/* The Sunny Doll Button */}
+            <motion.div
+               className="cursor-pointer relative z-10 -mt-1 origin-top"
+               onClick={handleClick}
+               whileHover={{ 
+                  rotate: [0, -5, 5, 0], 
+                  transition: { repeat: Infinity, duration: 3, ease: "easeInOut" } 
+               }}
+               animate={isAnimating ? { y: [0, 60, 0] } : { y: 0 }}
+               transition={isAnimating ? { duration: 0.6, times: [0, 0.4, 1], ease: "easeInOut" } : {}}
+            >
+               <img 
+                 src="./images/back.png" 
+                 alt="Back" 
+                 className="w-20 md:w-24 object-contain filter drop-shadow-lg hover:brightness-105 transition-all" 
+                 draggable="false"
+               />
+            </motion.div>
+          </motion.div>
+        );
+      };
+
+      // SceneVinylPlayer (Full Page)
+      const SceneVinylPlayer = ({ onBack }) => {
+        const [isPlaying, setIsPlaying] = useState(false);
+        const [progress, setProgress] = useState(0);
+        const [duration, setDuration] = useState(0);
+        const [currentTime, setCurrentTime] = useState(0);
+        const [volume, setVolume] = useState(0.5);
+        
+        const audioRef = useRef(null);
+        const canvasRef = useRef(null);
+        const analyserRef = useRef(null);
+        const requestRef = useRef(null);
+        const vinylRef = useRef(null);
+        const lyricsContainerRef = useRef(null);
+
+        // Audio Initialization
+        useEffect(() => {
+          const audio = new Audio(AUDIO_URL);
+          audio.crossOrigin = "anonymous";
+          audio.loop = true;
+          audio.volume = volume;
+          audioRef.current = audio;
+
+          const AC = window.AudioContext || window.webkitAudioContext;
+          const ctx = new AC();
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 256; 
+          
+          const src = ctx.createMediaElementSource(audio);
+          src.connect(analyser);
+          analyser.connect(ctx.destination);
+          analyserRef.current = analyser;
+
+          const updateProgress = () => {
+             setCurrentTime(audio.currentTime);
+             setProgress((audio.currentTime / audio.duration) * 100 || 0);
+          };
+          
+          audio.addEventListener('timeupdate', updateProgress);
+          audio.addEventListener('loadedmetadata', () => setDuration(audio.duration));
+          
+          audio.play().then(() => setIsPlaying(true)).catch(console.error);
+
+          return () => {
+             audio.pause();
+             audio.removeEventListener('timeupdate', updateProgress);
+             ctx.close();
+             cancelAnimationFrame(requestRef.current);
+          };
+        }, []);
+
+        const togglePlay = () => {
+           if(isPlaying) audioRef.current.pause();
+           else audioRef.current.play();
+           setIsPlaying(!isPlaying);
+        };
+
+        const handleVolumeChange = (e) => {
+           const v = parseFloat(e.target.value);
+           setVolume(v);
+           if(audioRef.current) audioRef.current.volume = v;
+        };
+
+        const handleSeek = (e) => {
+           const val = parseFloat(e.target.value);
+           if(audioRef.current && duration) {
+              audioRef.current.currentTime = (val / 100) * duration;
+           }
+        };
+
+        const animate = () => {
+          if (!canvasRef.current || !analyserRef.current) return;
+          const canvas = canvasRef.current;
+          const ctx = canvas.getContext('2d');
+          const width = canvas.width;
+          const height = canvas.height;
+          const centerX = width / 2;
+          const centerY = height / 2;
+          const radius = Math.min(width, height) * 0.28; 
+
+          const bufferLength = analyserRef.current.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+          analyserRef.current.getByteFrequencyData(dataArray);
+
+          ctx.clearRect(0, 0, width, height);
+
+          const bars = 60; 
+          const step = (Math.PI * 2) / bars;
+
+          for (let i = 0; i < bars; i++) {
+             const dataIndex = Math.floor((i / bars) * (bufferLength * 0.7)); 
+             const value = dataArray[dataIndex];
+             const barHeight = Math.max(4, (value / 255) * 60); 
+             
+             const angle = i * step - Math.PI / 2; 
+
+             const x1 = centerX + Math.cos(angle) * radius;
+             const y1 = centerY + Math.sin(angle) * radius;
+             const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+             const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+
+             ctx.beginPath();
+             ctx.moveTo(x1, y1);
+             ctx.lineTo(x2, y2);
+             ctx.strokeStyle = `rgba(197, 160, 89, ${value / 255})`; 
+             ctx.lineWidth = 3;
+             ctx.lineCap = 'round';
+             ctx.stroke();
+          }
+
+          requestRef.current = requestAnimationFrame(animate);
+        };
+
+        useEffect(() => {
+           requestRef.current = requestAnimationFrame(animate);
+           return () => cancelAnimationFrame(requestRef.current);
+        }, []);
+
+        useEffect(() => {
+           const resize = () => {
+              if(canvasRef.current) {
+                 canvasRef.current.width = canvasRef.current.parentElement.offsetWidth;
+                 canvasRef.current.height = canvasRef.current.parentElement.offsetHeight;
+              }
+           };
+           window.addEventListener('resize', resize);
+           resize();
+           return () => window.removeEventListener('resize', resize);
+        }, []);
+
+        const currentLyricIndex = useMemo(() => {
+           return LYRICS.findLastIndex(l => currentTime >= l.time);
+        }, [currentTime]);
+
+        useEffect(() => {
+           if(lyricsContainerRef.current && currentLyricIndex !== -1) {
+              const activeEl = lyricsContainerRef.current.children[currentLyricIndex];
+              if(activeEl) {
+                 activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+           }
+        }, [currentLyricIndex]);
+
+        const fmtTime = (t) => {
+           if(!t) return "0:00";
+           const m = Math.floor(t / 60);
+           const s = Math.floor(t % 60).toString().padStart(2, '0');
+           return `${m}:${s}`;
+        };
+
+        return (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-vinyl-bg flex flex-col md:flex-row overflow-hidden text-vinyl-text font-serif"
+          >
+             <button onClick={onBack} className="absolute top-6 left-6 z-50 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors border border-white/10 text-vinyl-text">
+                <ChevronLeft size={24} />
+             </button>
+
+             <div className="relative flex-1 h-[60%] md:h-full flex flex-col items-center justify-center p-8">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-vinyl-bg via-[#120f0b] to-black opacity-80 pointer-events-none"></div>
+                
+                <div className="md:hidden absolute top-4 text-center z-10">
+                   <h2 className="text-xl font-bold tracking-widest text-vinyl-gold">A THOUSAND YEARS</h2>
+                   <p className="text-xs text-white/40 tracking-[0.2em] mt-1">CHRIST</p>
+                </div>
+
+                <div className="relative w-full max-w-[500px] aspect-square flex items-center justify-center">
+                   <canvas ref={canvasRef} className="absolute inset-0 z-0 opacity-80" />
+
+                   <motion.div 
+                      ref={vinylRef}
+                      className="w-[65%] h-[65%] rounded-full shadow-2xl relative z-10 border border-[#222]"
+                      style={{ 
+                         background: 'radial-gradient(#111 20%, #1a1a1a 60%, #000 70%)',
+                         boxShadow: '0 0 50px rgba(0,0,0,0.8)' 
+                      }}
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: isPlaying ? 4 : 0, ease: "linear", repeat: Infinity }}
+                   >
+                      <div className="absolute inset-[2%] rounded-full vinyl-grooves opacity-80 border border-white/5"></div>
+                      <div className="absolute inset-0 rounded-full vinyl-shine opacity-30"></div>
+                      
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full bg-[#8B0000] border-4 border-[#1a1510] flex items-center justify-center shadow-inner">
+                         <div className="text-center transform scale-75">
+                            <div className="text-[8px] text-vinyl-gold tracking-widest uppercase mb-1">High Fidelity</div>
+                            <div className="text-2xl">🎻</div>
+                         </div>
+                         <div className="absolute w-2 h-2 bg-black rounded-full shadow-[0_1px_1px_rgba(255,255,255,0.2)]"></div>
+                      </div>
+                   </motion.div>
+
+                   <motion.div 
+                      className="absolute top-[5%] right-[5%] w-[80px] h-[250px] z-20 pointer-events-none origin-[top_right]"
+                      animate={{ rotate: isPlaying ? 25 : 0 }}
+                      initial={{ rotate: 0 }}
+                      transition={{ duration: 1, ease: "easeInOut" }}
+                   >
+                       <img src="https://cdn-icons-png.flaticon.com/512/3062/3062634.png" className="w-full h-full object-contain opacity-0" alt="arm" /> 
+                       <div className="absolute top-4 right-4 w-16 h-16 bg-[#222] rounded-full shadow-lg border border-white/10 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-full bg-[#111] shadow-inner"></div>
+                       </div>
+                       <div className="absolute top-10 right-10 w-2 h-48 bg-[#444] rounded-full origin-top transform rotate-[15deg] shadow-xl" style={{ background: 'linear-gradient(90deg, #333, #666, #333)' }}></div>
+                       <div className="absolute bottom-[20px] right-[75px] w-12 h-20 bg-[#222] rounded-md transform rotate-[35deg] shadow-lg"></div>
+                   </motion.div>
+                </div>
+                
+                <div className="absolute bottom-8 z-30 flex flex-col items-center gap-4 w-full px-8 md:px-0 md:w-auto">
+                    <div className="flex items-center gap-6">
+                       <button className="text-vinyl-goldDim hover:text-vinyl-gold transition-colors"><SkipBack size={20} fill="currentColor" /></button>
+                       <button onClick={togglePlay} className="w-14 h-14 rounded-full bg-vinyl-gold text-vinyl-bg flex items-center justify-center hover:bg-[#d4b06a] transition-colors shadow-gold-glow">
+                          {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
+                       </button>
+                       <button className="text-vinyl-goldDim hover:text-vinyl-gold transition-colors"><SkipForward size={20} fill="currentColor" /></button>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 w-full max-w-xs">
+                        <span className="text-xs text-white/40 font-sans tabular-nums w-8 text-right">{fmtTime(currentTime)}</span>
+                        <input 
+                           type="range" 
+                           min="0" max="100" 
+                           value={progress}
+                           onChange={handleSeek}
+                           className="flex-1 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-vinyl-gold [&::-webkit-slider-thumb]:rounded-full"
+                        />
+                        <span className="text-xs text-white/40 font-sans tabular-nums w-8">{fmtTime(duration)}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-1">
+                        <Volume2 size={12} className="text-white/30" />
+                        <input type="range" min="0" max="1" step="0.01" value={volume} onChange={handleVolumeChange} className="w-20 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:bg-white/50 [&::-webkit-slider-thumb]:rounded-full" />
+                    </div>
+                </div>
+             </div>
+
+             <div className="w-full h-[40%] md:h-full md:w-[40%] bg-[#15120e] relative flex flex-col items-center pt-8 md:pt-20 pb-8 px-6 border-l border-white/5">
+                <div className="hidden md:block text-center mb-12">
+                   <h2 className="text-2xl font-bold tracking-[0.2em] text-vinyl-gold mb-2 font-serif uppercase">A Thousand Years</h2>
+                   <p className="text-xs text-white/40 tracking-[0.3em] font-sans">PLAYBACK ACTIVE</p>
+                </div>
+                
+                <div className="relative w-full h-full overflow-hidden lyrics-mask">
+                   <div 
+                      ref={lyricsContainerRef}
+                      className="w-full h-full overflow-y-auto scrollbar-hide flex flex-col items-center py-[50%]"
+                   >
+                      {LYRICS.map((line, i) => {
+                         const isActive = i === currentLyricIndex;
+                         return (
+                            <motion.div 
+                               key={i}
+                               className={`text-center py-3 md:py-4 transition-all duration-500 cursor-pointer ${isActive ? 'text-vinyl-gold scale-105 opacity-100 font-medium' : 'text-white/30 scale-100 opacity-40 blur-[0.5px] hover:opacity-60'}`}
+                               onClick={() => {
+                                  if(audioRef.current) audioRef.current.currentTime = line.time;
+                               }}
+                            >
+                               <p className="text-lg md:text-xl font-serif leading-relaxed px-4">
+                                  {line.text}
+                               </p>
+                            </motion.div>
+                         )
+                      })}
+                      <div className="h-32"></div> 
+                   </div>
+                </div>
+             </div>
+          </motion.div>
+        );
+      };
+
       // SCENE 0: LOGIN
       const Scene0Login = ({ onLogin }) => {
         const [showPassword, setShowPassword] = useState(false);
@@ -162,14 +647,13 @@
 
         const handleLogin = (e) => {
           e.preventDefault();
-          // Validation Logic
           if (username === 'xiaoma' && password === '1227') {
             setError('');
             onLogin();
           } else {
             setError('账号或密码错误，请重试');
             setShake(true);
-            setTimeout(() => setShake(false), 500); // Reset shake animation
+            setTimeout(() => setShake(false), 500);
           }
         };
 
@@ -182,7 +666,6 @@
             exit={{ opacity: 0, scale: 1.1 }}
             transition={{ duration: 0.8 }}
           >
-            {/* Dark overlay for better text readability */}
             <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]"></div>
 
             <motion.div 
@@ -195,7 +678,6 @@
               <p className="text-white/80 text-sm mb-6">请登录您的账户</p>
 
               <form onSubmit={handleLogin} className="w-full space-y-4">
-                {/* Username */}
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 transition-colors group-focus-within:text-usagi-orange">
                     <User size={20} />
@@ -209,7 +691,6 @@
                   />
                 </div>
 
-                {/* Password */}
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 transition-colors group-focus-within:text-usagi-orange">
                     <Lock size={20} />
@@ -230,14 +711,12 @@
                   </button>
                 </div>
 
-                {/* Error Message */}
                 {error && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="text-red-200 bg-red-500/30 px-3 py-1 rounded-2xl text-xs text-center font-bold">
                     {error}
                   </motion.div>
                 )}
 
-                {/* Extras */}
                 <div className="flex justify-between items-center text-xs text-white/90 px-1">
                   <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
                     <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-usagi-orange focus:ring-usagi-orange" />
@@ -246,7 +725,6 @@
                   <button type="button" className="hover:underline hover:text-white transition-colors">忘记密码?</button>
                 </div>
 
-                {/* Login Button */}
                 <button 
                   type="submit"
                   className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#8A7CFB] to-[#635BFF] text-white font-bold text-lg shadow-lg hover:shadow-xl hover:opacity-90 active:scale-[0.98] transition-all mt-4"
@@ -255,14 +733,12 @@
                 </button>
               </form>
 
-              {/* Divider */}
               <div className="w-full flex items-center gap-4 my-6 text-white/60 text-xs">
                 <div className="h-px bg-white/30 flex-1"></div>
                 <span>或者</span>
                 <div className="h-px bg-white/30 flex-1"></div>
               </div>
 
-              {/* Social Login */}
               <div className="w-full space-y-3">
                 <button className="w-full py-2.5 rounded-2xl bg-white/90 hover:bg-white text-[#07C160] font-bold border border-[#07C160]/20 flex items-center justify-center gap-2 transition-all shadow-sm">
                   <MessageCircle size={20} fill="currentColor" className="text-[#07C160]" />
@@ -274,7 +750,6 @@
                 </button>
               </div>
 
-              {/* Footer */}
               <div className="mt-8 text-xs text-white/80">
                 还没有账户? <button className="text-blue-200 font-bold hover:underline ml-1">立即注册</button>
               </div>
@@ -284,7 +759,7 @@
         );
       };
 
-      // Usagi Character Component (Updated with Custom Image)
+      // Usagi Character Component
       const UsagiCharacter = ({ action, className, onClick, boardText }) => {
         const variants = {
           idle: { y: [0, -5, 0], transition: { repeat: Infinity, duration: 2 } },
@@ -306,7 +781,6 @@
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            {/* Replaced SVG with Custom Image */}
             <img 
               src="./images/mai.png" 
               alt="Character" 
@@ -314,7 +788,6 @@
               draggable="false"
             />
             
-            {/* Accessories / Overlays based on action */}
             {action === 'heart' && (
                 <motion.div 
                   className="absolute -top-4 -right-4 text-4xl filter drop-shadow-md"
@@ -336,7 +809,6 @@
                 </motion.div>
             )}
             
-            {/* Hold Board Overlay */}
             {action === 'hold-board' && (
                <div className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[40%] max-w-[300px]">
                   <div className="w-full h-full bg-white border-4 border-dashed border-usagi-orange rounded-xl flex items-center justify-center p-3 shadow-lg transform -rotate-2 relative z-10">
@@ -371,7 +843,7 @@
         );
       };
 
-      // Atmospheric Particles Component (New)
+      // Atmosphere Particles
       const AtmosphereParticles = () => {
         const particles = useMemo(() => Array.from({ length: 15 }).map((_, i) => ({
           id: i,
@@ -414,37 +886,31 @@
         );
       };
 
-      // Back Button Component (Updated)
-      const BackButton = ({ onClick, disabled = false }) => (
-        <motion.button 
-          onClick={onClick} 
-          disabled={disabled} 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: disabled ? 0.5 : 1 }} 
-          whileHover={!disabled ? { scale: 1.1 } : {}} 
-          whileTap={!disabled ? { scale: 0.95 } : {}}
-          className={`fixed bottom-6 right-6 z-50 flex items-center justify-center w-16 h-16 rounded-full shadow-lg border-4 border-white transition-all duration-300 overflow-hidden ${disabled ? 'bg-usagi-main/50 cursor-not-allowed grayscale' : 'bg-[#F9D59B] hover:bg-[#F7C070] cursor-pointer'}`}
-        >
-          <div className="w-10 h-10 mt-1">
-             <UsagiCharacter action="idle" className="w-full h-full" />
-          </div>
-        </motion.button>
-      );
-
       // --- 3. SCENES ---
 
-      // SCENE 1: Intro
+      // SCENE 1: Intro (UPDATED WITH BALLOON PHYSICS & BUTTON STYLE)
       const Scene1Intro = ({ onStart }) => {
+        const BALLOON_TEXTS = ["喜欢你~", "要开心！", "暴富暴富✨", "天天好心情", "吃不胖！", "永远美少女", "平安喜乐", "好运连连"];
+        
+        // Define specific colors for balloons based on index/assumed image content
+        // 0: Pink/Red, 1: Blue/Teal, 2: Yellow/Orange
+        const BALLOON_COLORS = [
+           { shadow: 'rgba(255, 182, 193, 0.4)', filter: 'drop-shadow(0 15px 10px rgba(255, 105, 180, 0.2))' }, 
+           { shadow: 'rgba(173, 216, 230, 0.4)', filter: 'drop-shadow(0 15px 10px rgba(70, 130, 180, 0.2))' }, 
+           { shadow: 'rgba(255, 222, 173, 0.4)', filter: 'drop-shadow(0 15px 10px rgba(255, 165, 0, 0.2))' }
+        ];
+
         const balloons = useMemo(() => {
           return Array.from({ length: 15 }).map((_, i) => {
             const scale = Math.random() * 0.4 + 0.8;
             const speed = Math.random() * 10 + 15;
-            const sway = Math.random() * 50 + 30;
-            const swayTime = Math.random() * 3 + 4;
+            const sway = Math.random() * 50 + 30; // Amplitude
+            const swayTime = Math.random() * 4 + 4; // Duration of one sway cycle
             
             return {
               id: i,
               src: ASSETS.balloons[i % ASSETS.balloons.length],
+              colorConfig: BALLOON_COLORS[i % BALLOON_COLORS.length],
               left: Math.random() * 90 + 5,
               scale: scale,
               duration: speed,
@@ -456,34 +922,125 @@
           });
         }, []);
 
+        // Interactive Balloon Sub-component with Enhanced Physics & Shadows
+        const InteractiveBalloon = ({ config }) => {
+          const [isClicked, setIsClicked] = useState(false);
+          const [message, setMessage] = useState(null);
+
+          const handleClick = (e) => {
+            e.stopPropagation();
+            setIsClicked(true);
+            setMessage(BALLOON_TEXTS[Math.floor(Math.random() * BALLOON_TEXTS.length)]);
+            
+            setTimeout(() => setIsClicked(false), 300);
+            setTimeout(() => setMessage(null), 1500);
+          };
+
+          return (
+            <motion.div
+              className="absolute"
+              style={{ left: `${config.left}%`, bottom: '-150px', zIndex: 15 }}
+              animate={{ 
+                y: -window.innerHeight - 300,
+                x: [0, config.swayAmount, -config.swayAmount/2, config.swayAmount/2, 0] // Natural wandering path
+              }}
+              transition={{ 
+                y: { duration: config.duration, ease: "linear", repeat: Infinity, delay: config.delay }, 
+                x: { duration: config.swayDuration, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" }
+              }}
+            >
+              <motion.div
+                onClick={handleClick}
+                // Simulate "bouncing off clouds" turbulence at the top (simple random x offset)
+                style={{ filter: config.colorConfig.filter }}
+                animate={isClicked ? { scale: 1.2, rotate: [0, -10, 10, 0] } : { 
+                  scale: config.scale, 
+                  rotate: [0, config.rotateAmount, 0, -config.rotateAmount, 0],
+                  y: [0, -15, 0], // Internal bobbing for extra floatiness
+                  x: [0, Math.random() * 10 - 5, 0] // Subtle turbulence
+                }}
+                transition={isClicked ? { duration: 0.3 } : { 
+                  rotate: { duration: config.swayDuration - 1, ease: "easeInOut", repeat: Infinity },
+                  y: { duration: 3, ease: "easeInOut", repeat: Infinity },
+                  x: { duration: 5, ease: "easeInOut", repeat: Infinity, delay: Math.random() * 5 }
+                }}
+                className="relative cursor-pointer select-none"
+                whileHover={{ scale: 1.1 }}
+              >
+                <img src={config.src} className="w-[100px] object-contain opacity-90" alt="balloon" draggable="false"/>
+                
+                {/* Colored Shadow Trail / Glow */}
+                <div 
+                   className="absolute bottom-2 left-1/2 -translate-x-1/2 w-3/4 h-4 rounded-full blur-md opacity-40 pointer-events-none"
+                   style={{ background: config.colorConfig.shadow }}
+                ></div>
+
+                <AnimatePresence>
+                  {message && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: -50 }}
+                      exit={{ opacity: 0, scale: 0.5, y: -70 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute left-1/2 -translate-x-1/2 top-0 bg-white/95 px-3 py-1.5 rounded-xl text-usagi-text text-sm font-bold shadow-lg border-2 border-usagi-pink/50 whitespace-nowrap z-50 pointer-events-none"
+                    >
+                      {message}
+                      <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white/95 rotate-45 border-b-2 border-r-2 border-usagi-pink/50"></div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </motion.div>
+          );
+        };
+
         return (
           <motion.div className="relative w-full h-screen flex flex-col items-center justify-center z-10 overflow-hidden" exit={{ opacity: 0, x: -50 }}>
+            {/* Dynamic Light Background */}
+            <LightOverlay />
+            
+            {/* Scene Decorations */}
+            <SceneDecorations />
+            
+            {/* Countdown */}
+            <MiniCountdown />
+
             {balloons.map((b) => (
-              <motion.img 
-                key={b.id} 
-                src={b.src} 
-                className="absolute -bottom-40 w-[100px] object-contain opacity-90" 
-                style={{ left: `${b.left}%`, scale: b.scale }}
-                initial={{ y: 0 }}
-                animate={{ 
-                  y: -window.innerHeight - 300,
-                  x: [0, b.swayAmount, 0, -b.swayAmount, 0],
-                  rotate: [0, b.rotateAmount, 0, -b.rotateAmount, 0]
-                }} 
-                transition={{ 
-                  y: { duration: b.duration, ease: "linear", repeat: Infinity, delay: b.delay }, 
-                  x: { duration: b.swayDuration, ease: "easeInOut", repeat: Infinity },
-                  rotate: { duration: b.swayDuration - 1, ease: "easeInOut", repeat: Infinity }
-                }} 
-              />
+              <InteractiveBalloon key={b.id} config={b} />
             ))}
+            
             <motion.div initial={{ x: -window.innerWidth, y: 100 }} animate={{ x: 0, y: 0 }} transition={{ type: "spring", stiffness: 60, damping: 15 }} className="mb-8 relative z-20 cursor-pointer" whileHover={{ scale: 1.05 }} onClick={onStart}>
               <motion.div className="absolute inset-0 bg-usagi-main/30 rounded-full blur-xl" animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 2, repeat: Infinity }} />
               <UsagiCharacter action="jump" className="w-56 h-56 md:w-72 md:h-72 relative z-10" />
             </motion.div>
-            <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} onClick={onStart}
-              className="group relative z-20 bg-usagi-main text-usagi-text font-bold py-3 px-12 rounded-full shadow-lg border-4 border-white hover:border-usagi-orange transition-all overflow-hidden">
-              <span className="relative z-10 text-xl font-hand">开启祝福 ✨</span>
+            
+            {/* Start Button - Soft Candy Style */}
+            <motion.button 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ delay: 0.8 }} 
+              whileHover="hover"
+              whileTap={{ scale: 0.95 }} 
+              onClick={onStart}
+              className="group relative z-20 bg-gradient-to-r from-[#FFB74D] to-[#FF8A65] hover:brightness-110 text-white font-bold py-3 px-12 rounded-[20px] shadow-[0_8px_20px_rgba(255,183,77,0.4)] border-2 border-white/40 transition-all overflow-hidden"
+            >
+              <motion.div 
+                variants={{ hover: { scale: 1.05 } }}
+                transition={{ type: "spring", stiffness: 400 }}
+                className="relative z-10 text-xl font-hand flex items-center gap-2"
+              >
+                开启祝福 
+                <motion.span 
+                  variants={{ hover: { rotate: 180, scale: 1.2 } }}
+                  transition={{ duration: 0.4 }}
+                  className="inline-block"
+                >
+                  ✨
+                </motion.span>
+              </motion.div>
+              
+              {/* Gloss/Shine Effect */}
+              <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/30 to-transparent rounded-t-[20px] pointer-events-none"></div>
             </motion.button>
           </motion.div>
         );
@@ -533,12 +1090,21 @@
         );
       };
 
-      // SCENE 3: Wishes - REFINED & DETAILED
-      const Scene3Wishes = ({ onGoToCakeInteraction, onGoToOutro }) => {
-        const [giftOpen, setGiftOpen] = useState(false);
+      // SCENE 3: Wishes
+      const Scene3Wishes = ({ onGoToCakeInteraction, onGoToOutro, onGoToMusic, pauseBGM }) => {
         const letterChars = BIRTHDAY_LETTER.split('');
 
-        // Staggered animation for characters
+        const handleGiftClick = () => {
+          pauseBGM(); 
+          confetti({
+             particleCount: 150,
+             spread: 70,
+             origin: { y: 0.6 },
+             colors: ['#F9D59B', '#F8C8DC', '#FBBF77', '#FFFFFF']
+          });
+          onGoToMusic(); 
+        };
+
         const containerVariants = {
           hidden: { opacity: 0 },
           visible: {
@@ -553,21 +1119,41 @@
         };
 
         return (
-          <div className="relative min-h-screen w-full flex items-center justify-center p-4 md:p-8 overflow-y-auto">
-            {/* Atmospheric Decoration */}
+          <div className="relative min-h-screen w-full flex items-center justify-center p-4 md:p-8 overflow-hidden">
             <AtmosphereParticles />
+
+            {/* Added: Bottom Right Image (shengri) */}
+            <motion.img 
+              src="./images/shengri.png" 
+              alt="Decoration" 
+              className="absolute bottom-4 right-4 w-32 md:w-56 z-10 pointer-events-none"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            />
 
             <div className="relative z-20 w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
               
-              {/* Left Side: Upgraded Text Area */}
               <motion.div 
                 initial={{ x: -30, opacity: 0 }} 
                 animate={{ x: 0, opacity: 1 }} 
                 transition={{ duration: 0.8, ease: "easeOut" }}
                 className="w-full bg-gradient-to-b from-[#FFF9E6]/80 to-[#FFF9E6]/40 backdrop-blur-[5px] border border-white/40 shadow-soft p-8 md:p-12 rounded-2xl relative flex flex-col justify-between min-h-[420px]"
               >
-                {/* Header with Glowing Title */}
-                <div className="flex items-center gap-3 mb-8">
+                {/* Added: Top Right Sticker (xingfu) */}
+                <img 
+                   src="./images/xingfu.png" 
+                   alt="Happiness" 
+                   className="absolute -top-6 -right-6 w-24 md:w-32 z-50 transform rotate-12 drop-shadow-md pointer-events-none"
+                />
+                
+                {/* Added: Bottom Left Long Arm Rabbit (kuang) */}
+                <img 
+                   src="./images/kuang.png" 
+                   alt="Frame" 
+                   className="absolute -bottom-10 -left-12 w-[130%] max-w-none z-50 pointer-events-none"
+                />
+
+                <div className="flex items-center gap-3 mb-8 relative z-10">
                   <motion.h2 
                     className="text-[28px] md:text-3xl font-cute font-bold text-[#F06292] tracking-wide title-glow"
                     animate={{ y: [0, -3, 0] }}
@@ -584,9 +1170,8 @@
                   </motion.div>
                 </div>
 
-                {/* Cute Handwritten Body Text (Character Fade In) */}
                 <motion.div 
-                  className="font-cute text-xl md:text-2xl text-[#5D4037] leading-[1.8] tracking-wide flex-grow"
+                  className="font-cute text-xl md:text-2xl text-[#5D4037] leading-[1.8] tracking-wide flex-grow relative z-10"
                   variants={containerVariants}
                   initial="hidden"
                   animate="visible"
@@ -598,18 +1183,15 @@
                   ))}
                 </motion.div>
 
-                {/* Signature */}
-                <div className="mt-8 flex justify-end">
+                <div className="mt-8 flex justify-end relative z-10">
                   <span className="text-sm font-sans text-gray-500/80 tracking-widest uppercase">
                     来自 {SENDER_NAME}
                   </span>
                 </div>
               </motion.div>
 
-              {/* Right Side: Refined Interaction Stack */}
               <div className="flex flex-col items-center gap-8 relative">
                 
-                {/* 1. Cake (Top) with Float Hover */}
                 <motion.div 
                   className="relative cursor-pointer group" 
                   onClick={onGoToCakeInteraction} 
@@ -623,17 +1205,26 @@
                   </span>
                 </motion.div>
 
-                {/* 2. Gift (Middle) with Float Hover */}
                 <motion.div 
-                  className="relative cursor-pointer" 
-                  onClick={() => setGiftOpen(true)} 
+                  className="relative cursor-pointer group" 
+                  onClick={handleGiftClick} 
                   whileHover={{ y: -5, rotate: [0, -5, 5, 0], filter: "drop-shadow(0 10px 10px rgba(0,0,0,0.1))" }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <div className="text-7xl md:text-8xl filter brightness-105">🎁</div>
+                  
+                  <motion.div 
+                     className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
+                     initial={{ y: 5 }}
+                     whileHover={{ y: -5 }}
+                  >
+                     <div className="bg-white px-3 py-1 rounded-full shadow-lg border border-usagi-orange/30 text-usagi-text text-sm font-bold whitespace-nowrap flex items-center gap-1">
+                        点击拆礼物 <Sparkles size={12} className="text-yellow-500"/>
+                     </div>
+                     <div className="w-2 h-2 bg-white transform rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2 border-b border-r border-usagi-orange/30"></div>
+                  </motion.div>
                 </motion.div>
 
-                {/* 3. Button (Bottom) with Ripple & Gradient */}
                 <motion.button 
                   onClick={onGoToOutro} 
                   whileHover={{ scale: 1.05, boxShadow: "0 10px 20px rgba(251, 191, 119, 0.4)" }}
@@ -642,28 +1233,11 @@
                 >
                   <span className="relative z-10">许个愿望</span>
                   <ArrowRight size={20} className="relative z-10" />
-                  {/* Ripple overlay */}
                   <div className="absolute inset-0 bg-white/20 scale-0 group-active:scale-150 transition-transform duration-300 rounded-full origin-center"></div>
                 </motion.button>
 
               </div>
             </div>
-
-            {/* Gift Popup Overlay */}
-            <AnimatePresence>
-              {giftOpen && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-                  <motion.div initial={{ scale: 0.5, y: 100 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.5, opacity: 0 }} className="relative bg-gradient-to-br from-usagi-light to-usagi-main p-1 rounded-2xl shadow-2xl max-w-sm w-full">
-                    <div className="bg-white rounded-2xl p-6 text-center border-4 border-dashed border-usagi-orange relative overflow-hidden">
-                      <button onClick={() => setGiftOpen(false)} className="absolute top-2 right-2 p-2 text-usagi-text hover:bg-usagi-pink/20 rounded-full transition-colors"><X size={28} /></button>
-                      <img src={ASSETS.giftImage} alt="Surprise" className="w-full h-48 object-contain mb-4 rounded-lg bg-usagi-light/50" />
-                      <h3 className="text-2xl font-cute font-bold text-usagi-orange mb-2">惊喜!</h3>
-                      <p className="text-lg text-usagi-text font-sans font-medium">{GIFT_SURPRISES.messages[Math.floor(Math.random() * GIFT_SURPRISES.messages.length)]}</p>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         );
       };
@@ -716,7 +1290,7 @@
         const CONFIG = useMemo(() => ({
           particleCount: 35000,
           colors: { base: new THREE.Color('#F9D59B'), cream: new THREE.Color('#FFF8E1'), candle: new THREE.Color('#E0C097'), wick: new THREE.Color('#5D4037'), flameCore: new THREE.Color('#FFFFFF'), flameOuter: new THREE.Color('#FBBF77'), heart: new THREE.Color('#FF69B4'), heartGlow: new THREE.Color('#FFC0CB') },
-          thresholds: { pinchDist: 0.05, audioLevel: 15 }
+          thresholds: { pinchDist: 0.05, audioLevel: 45 } 
         }), []);
 
         useEffect(() => {
@@ -898,27 +1472,34 @@
           setHandVisible(true);
           const lm = results.multiHandLandmarks[0];
 
-          const getDist = (p1, p2) => Math.hypot(lm[p1].x - lm[p2].x, lm[p1].y - lm[p2].y);
+          const wrist = lm[0];
           
-          const isFingerFolded = (tip, pip) => getDist(tip, 0) < getDist(pip, 0); 
+          const isExtended = (tipIdx, pipIdx) => {
+             const dTip = Math.hypot(lm[tipIdx].x - wrist.x, lm[tipIdx].y - wrist.y);
+             const dPip = Math.hypot(lm[pipIdx].x - wrist.x, lm[pipIdx].y - wrist.y);
+             return dTip > dPip;
+          };
 
-          const indexFolded = isFingerFolded(8, 6);
-          const middleFolded = isFingerFolded(12, 10);
-          const ringFolded = isFingerFolded(16, 14);
-          const pinkyFolded = isFingerFolded(20, 18);
-          const thumbFolded = getDist(4, 17) < 0.15 || getDist(4, 5) < 0.1;
+          const indexExt = isExtended(8, 6);
+          const middleExt = isExtended(12, 10);
+          const ringExt = isExtended(16, 14);
+          const pinkyExt = isExtended(20, 18);
 
-          const isPinch = getDist(4, 8) < CONFIG.thresholds.pinchDist; 
-          const isPeace = !indexFolded && !middleFolded && ringFolded && pinkyFolded;
-          const foldedCount = [indexFolded, middleFolded, ringFolded, pinkyFolded].filter(Boolean).length;
-          const isFist = foldedCount >= 3 && !isPinch;
-          const isOpen = foldedCount <= 1 && !isPinch;
+          const pinchDist = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y);
+          const isPinch = pinchDist < CONFIG.thresholds.pinchDist;
+
+          const isPeace = indexExt && middleExt && !ringExt && !pinkyExt && !isPinch;
+          
+          const isFist = !indexExt && !middleExt && !ringExt && !pinkyExt && !isPinch;
+          
+          const isOpen = indexExt && middleExt && ringExt && pinkyExt && !isPinch;
 
           let currentGesture = 'Unknown';
           if (isPeace) currentGesture = 'PEACE';
-          else if (isPinch) currentGesture = 'PINCH';
           else if (isFist) currentGesture = 'FIST';
           else if (isOpen) currentGesture = 'OPEN';
+          else if (isPinch) currentGesture = 'PINCH';
+          
           setDetectedGesture(currentGesture);
 
           const now = Date.now();
@@ -931,30 +1512,32 @@
             return;
           }
 
-          if (currentSurpriseActive) {
-             if (isFist || isOpen) {
-               setSurpriseActive(false);
-               setCakeState('ASSEMBLED');
-               triggerAction('CAKE_MODE');
-               lastActionTime.current = now;
+          if (isFist) {
+             if (currentSurpriseActive) {
+                setSurpriseActive(false);
+                setCakeState('ASSEMBLED');
+                triggerAction('CAKE_MODE');
+                lastActionTime.current = now;
+             } else if (currentCakeState === 'SCATTERED') {
+                setCakeState('ASSEMBLED');
+                triggerAction('ASSEMBLED');
+                lastActionTime.current = now;
              }
              return;
           }
 
-          if (currentCakeState === 'SCATTERED' && isFist) {
-             setCakeState('ASSEMBLED');
-             triggerAction('ASSEMBLED');
-             lastActionTime.current = now;
-          } else if (currentCakeState === 'ASSEMBLED' && isPinch) {
+          if (isPinch && currentCakeState === 'ASSEMBLED' && !currentSurpriseActive) {
              setCakeState('LIT');
              triggerAction('LIT');
              lastActionTime.current = now;
-          } else if (currentCakeState !== 'SCATTERED' && isOpen) {
-             if (getDist(4,8) > 0.1) { 
-               setCakeState('SCATTERED');
-               triggerAction('SCATTERED');
-               lastActionTime.current = now;
-             }
+             return;
+          }
+
+          if (isOpen && currentCakeState !== 'SCATTERED' && !currentSurpriseActive) {
+             setCakeState('SCATTERED');
+             triggerAction('SCATTERED');
+             lastActionTime.current = now;
+             return;
           }
         };
 
@@ -1034,13 +1617,17 @@
                 const data = new Uint8Array(analyserRef.current.frequencyBinCount);
                 analyserRef.current.getByteFrequencyData(data);
                 let sum = 0; for(let i=0; i<data.length; i++) sum += data[i];
-                if ((sum / data.length) > CONFIG.thresholds.audioLevel) {
+                const avg = sum / data.length;
+                
+                if (avg > CONFIG.thresholds.audioLevel) {
                    blowTriggerCount.current++;
-                   if (blowTriggerCount.current > 10) { 
+                   if (blowTriggerCount.current > 15) { 
                       triggerAction('EXTINGUISH'); 
                       blowTriggerCount.current = 0; 
                    }
-                } else blowTriggerCount.current = Math.max(0, blowTriggerCount.current - 1);
+                } else {
+                   blowTriggerCount.current = Math.max(0, blowTriggerCount.current - 2);
+                }
               }
               audioCheckRaf.current = requestAnimationFrame(checkAudio);
             };
@@ -1136,7 +1723,10 @@
         const [scene, setScene] = useState('LOGIN');
         const [muted, setMuted] = useState(false);
         const audioRef = useRef(null);
+        
+        // Initial Background Music (separate from record player)
         useEffect(() => { audioRef.current = new Audio(ASSETS.sounds.bgm); audioRef.current.loop = true; audioRef.current.volume = 0.4; }, []);
+        
         const toggleAudio = () => { if(audioRef.current) { audioRef.current.volume = muted ? 0.4 : 0; setMuted(!muted); } };
         const start = () => { audioRef.current?.play().catch(()=>{}); setScene('PHOTO_WALL'); };
         
@@ -1145,30 +1735,38 @@
            setScene('INTRO');
         };
 
+        const pauseBGM = () => {
+           if(audioRef.current) audioRef.current.pause();
+        };
+
         const back = () => { 
           if(scene==='PHOTO_WALL') setScene('INTRO'); 
           if(scene==='WISHES') setScene('PHOTO_WALL'); 
           if(scene==='CAKE') setScene('WISHES'); 
+          if(scene==='VINYL') setScene('WISHES'); 
           if(scene==='OUTRO') setScene('WISHES'); 
         };
 
         return (
           <div className="relative min-h-screen font-sans text-usagi-text overflow-hidden selection:bg-usagi-pink selection:text-white">
-            {scene !== 'LOGIN' && <Background />}
+            {scene !== 'LOGIN' && scene !== 'VINYL' && <Background />}
             
-            <div className="fixed top-4 right-4 z-50"><button onClick={toggleAudio} className="bg-white/80 p-3 rounded-full shadow-md hover:bg-white border border-usagi-main">{muted ? <VolumeX size={24}/> : <Volume2 size={24}/>}</button></div>
+            {scene !== 'VINYL' && (
+               <div className="fixed top-4 right-4 z-50"><button onClick={toggleAudio} className="bg-white/80 p-3 rounded-full shadow-md hover:bg-white border border-usagi-main">{muted ? <VolumeX size={24}/> : <Volume2 size={24}/>}</button></div>
+            )}
             
-            <BackButton onClick={back} disabled={scene==='INTRO' || scene==='LOGIN'} />
+            <BackButton onClick={back} disabled={scene==='INTRO' || scene==='LOGIN' || scene==='VINYL'} />
             
             <AnimatePresence mode="wait">
               {scene === 'LOGIN' && <Scene0Login key="login" onLogin={handleLoginSuccess} />}
               {scene === 'INTRO' && <Scene1Intro key="intro" onStart={start} />}
             </AnimatePresence>
             
-            {scene !== 'INTRO' && scene !== 'LOGIN' && <div className={`absolute inset-0 z-0 flex items-center justify-center transition-opacity duration-500 ${scene==='CAKE'?'opacity-20':'opacity-100'}`}><Scene2PhotoWall isActive={scene==='PHOTO_WALL'} onNext={()=>setScene('WISHES')} showButton={scene==='PHOTO_WALL'} isBackgroundMode={scene!=='PHOTO_WALL'} /></div>}
+            {scene !== 'INTRO' && scene !== 'LOGIN' && scene !== 'VINYL' && <div className={`absolute inset-0 z-0 flex items-center justify-center transition-opacity duration-500 ${scene==='CAKE'?'opacity-20':'opacity-100'}`}><Scene2PhotoWall isActive={scene==='PHOTO_WALL'} onNext={()=>setScene('WISHES')} showButton={scene==='PHOTO_WALL'} isBackgroundMode={scene!=='PHOTO_WALL'} /></div>}
             
             <AnimatePresence>
-              {scene === 'WISHES' && <motion.div key="wishes" className="absolute inset-0 z-10" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><Scene3Wishes onGoToCakeInteraction={()=>setScene('CAKE')} onGoToOutro={()=>setScene('OUTRO')} /></motion.div>}
+              {scene === 'WISHES' && <motion.div key="wishes" className="absolute inset-0 z-10" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><Scene3Wishes onGoToCakeInteraction={()=>setScene('CAKE')} onGoToOutro={()=>setScene('OUTRO')} onGoToMusic={()=>setScene('VINYL')} pauseBGM={pauseBGM}/></motion.div>}
+              {scene === 'VINYL' && <motion.div key="vinyl" className="absolute inset-0 z-[100]" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><SceneVinylPlayer onBack={()=>setScene('WISHES')} /></motion.div>}
               {scene === 'CAKE' && <motion.div key="cake" className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><Scene4CakeInteraction /></motion.div>}
               {scene === 'OUTRO' && <motion.div key="outro" className="absolute inset-0 z-20" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}><Scene5Outro /></motion.div>}
             </AnimatePresence>
