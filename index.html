@@ -63,7 +63,7 @@
       html, body { 
         background-color: #F9D59B; 
         overflow-x: hidden; 
-        cursor: url('./images/usagi-cursor.png') 0 0, auto !important;
+        cursor: url('https://test.fukit.cn/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251214/B4LO/32X33/usagi-cursor.png/webp') 0 0, auto !important;
       }
       
       .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -154,16 +154,16 @@
 
       // --- 1. CONSTANTS & ASSETS ---
       const RECIPIENT_NAME = "小叶";
-      const SENDER_NAME = "Best Friend";
+      const SENDER_NAME = "小马"; // Changed from "Best Friend"
       
       // Fixed: Use a stable MP3 URL (Pachelbel's Canon) to prevent "no supported source" errors
       const AUDIO_URL = "https://ia800501.us.archive.org/11/items/pachelbel-canon-in-d/Pachelbel%27s%20Canon%20in%20D.mp3"; 
       
       const ASSETS = {
         balloons: [
-          './images/balloon1.png',
-          './images/balloon2.png',
-          './images/balloon3.png'
+          'https://test.fukit.cn/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251214/ID9X/4276X4224/balloon1.png/webp',
+          'https://test.fukit.cn/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251214/SeRS/4320X4288/balloon2.png/webp',
+          'https://test.fukit.cn/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251214/mzlX/4284X4252/balloon3.png/webp'
         ],
         giftImage: './images/usagi-surprise.png',
         loginBackground: 'https://xland.eu.org/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251211/js6e/1922X1074/background.jpg', 
@@ -355,7 +355,7 @@
                transition={isAnimating ? { duration: 0.6, times: [0, 0.4, 1], ease: "easeInOut" } : {}}
             >
                <img 
-                 src="./images/back.png" 
+                 src="https://test.fukit.cn/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251214/bzad/2768X2688/back.png/webp" 
                  alt="Back" 
                  className="w-20 md:w-24 object-contain filter drop-shadow-lg hover:brightness-105 transition-all" 
                  draggable="false"
@@ -782,7 +782,7 @@
             whileTap={{ scale: 0.95 }}
           >
             <img 
-              src="./images/mai.png" 
+              src="https://test.fukit.cn/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251214/P3yB/4272X4300/mai.png/webp" 
               alt="Character" 
               className="w-full h-full object-contain drop-shadow-lg pointer-events-none"
               draggable="false"
@@ -1109,86 +1109,110 @@
           hidden: { opacity: 0 },
           visible: {
             opacity: 1,
-            transition: { staggerChildren: 0.05, delayChildren: 0.3 }
+            transition: { 
+               delayChildren: 4.0, // Text appears 4s after scene start (1s decor + 1s wait + 1s card + 1s wait)
+               staggerChildren: 0.1 
+            } 
           }
         };
 
         const charVariants = {
           hidden: { opacity: 0, y: 5 },
-          visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+          visible: { opacity: 1, y: 0, transition: { duration: 0.1 } }
         };
 
         return (
           <div className="relative min-h-screen w-full flex items-center justify-center p-4 md:p-8 overflow-hidden">
             <AtmosphereParticles />
 
-            {/* Added: Bottom Right Image (shengri) */}
+            {/* Phase 1: Shengri (Appears Immediately t=0) */}
             <motion.img 
-              src="./images/shengri.png" 
+              src="https://test.fukit.cn/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251214/TGpb/4320X4992/shengri.png/webp" 
               alt="Decoration" 
               className="absolute bottom-4 right-4 w-32 md:w-56 z-10 pointer-events-none"
-              animate={{ y: [0, -10, 0] }}
-              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1, y: [0, -10, 0] }}
+              transition={{ 
+                opacity: { duration: 1.0 }, 
+                y: { repeat: Infinity, duration: 4, ease: "easeInOut" }
+              }}
             />
 
             <div className="relative z-20 w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
               
-              <motion.div 
-                initial={{ x: -30, opacity: 0 }} 
-                animate={{ x: 0, opacity: 1 }} 
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="w-full bg-gradient-to-b from-[#FFF9E6]/80 to-[#FFF9E6]/40 backdrop-blur-[5px] border border-white/40 shadow-soft p-8 md:p-12 rounded-2xl relative flex flex-col justify-between min-h-[420px]"
-              >
-                {/* Added: Top Right Sticker (xingfu) */}
-                <img 
-                   src="./images/xingfu.png" 
-                   alt="Happiness" 
-                   className="absolute -top-6 -right-6 w-24 md:w-32 z-50 transform rotate-12 drop-shadow-md pointer-events-none"
-                />
-                
-                {/* Added: Bottom Left Long Arm Rabbit (kuang) */}
-                <img 
-                   src="./images/kuang.png" 
-                   alt="Frame" 
-                   className="absolute -bottom-10 -left-12 w-[130%] max-w-none z-50 pointer-events-none"
-                />
+              <div className="relative w-full">
+                  {/* Phase 1: Decorations (Appear Immediately t=0) */}
+                  
+                  {/* Sticker (Xingfu) */}
+                  <motion.img 
+                     src="https://test.fukit.cn/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251214/LCWH/5008X4320/xingfu.png/webp" 
+                     alt="Happiness" 
+                     className="absolute -top-6 -right-6 w-24 md:w-32 z-50 drop-shadow-md pointer-events-none origin-center"
+                     style={{ transform: 'translate(1cm, -1cm) scale(1.5) rotate(12deg)' }}
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     transition={{ duration: 1.0 }}
+                  />
+                  
+                  {/* Frame (Kuang) 
+                      Moved down 1.5cm from previous position (1cm). New position: 2.5cm.
+                  */}
+                  <motion.img 
+                     src="https://test.fukit.cn/autoupload/f/IeSYb0Mnf1Z62nIKYGB4NyfNcKcqEnRmcljopnyJoMs/20251214/JCAe/8000X5520/kuang.png/webp" 
+                     alt="Frame" 
+                     className="absolute -bottom-10 -left-12 w-[130%] max-w-none z-50 pointer-events-none"
+                     style={{ transform: 'translate(-1cm, 2.5cm)' }}
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     transition={{ duration: 1.0 }}
+                  />
 
-                <div className="flex items-center gap-3 mb-8 relative z-10">
-                  <motion.h2 
-                    className="text-[28px] md:text-3xl font-cute font-bold text-[#F06292] tracking-wide title-glow"
-                    animate={{ y: [0, -3, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    祝{RECIPIENT_NAME}生日快乐！
-                  </motion.h2>
+                  {/* Phase 2: Card Container (Appears t=2s - after 1s decor + 1s wait) */}
                   <motion.div 
-                    className="w-12 h-12 -mt-2"
-                    animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
+                    initial={{ x: -30, opacity: 0 }} 
+                    animate={{ x: 0, opacity: 1 }} 
+                    transition={{ delay: 2.0, duration: 1.0, ease: "easeOut" }}
+                    className="w-full bg-gradient-to-b from-[#FFF9E6]/80 to-[#FFF9E6]/40 backdrop-blur-[5px] border border-white/40 shadow-soft p-8 md:p-12 rounded-2xl relative flex flex-col justify-between min-h-[420px]"
                   >
-                    <UsagiCharacter action="cheer" className="w-full h-full" />
+                    <div className="flex items-center gap-3 mb-8 relative z-10">
+                      <motion.h2 
+                        className="text-[28px] md:text-3xl font-cute font-bold text-[#F06292] tracking-wide title-glow"
+                        animate={{ y: [0, -3, 0] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        祝{RECIPIENT_NAME}生日快乐！
+                      </motion.h2>
+                      <motion.div 
+                        className="w-12 h-12 -mt-2"
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        <UsagiCharacter action="cheer" className="w-full h-full" />
+                      </motion.div>
+                    </div>
+
+                    {/* Phase 3: Text (Appears t=4s+, controlled by containerVariants delayChildren) */}
+                    <motion.div 
+                      className="font-cute text-xl md:text-2xl text-[#5D4037] leading-[1.8] tracking-wide flex-grow relative z-10"
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      {letterChars.map((char, i) => (
+                        <motion.span key={i} variants={charVariants}>
+                          {char}
+                        </motion.span>
+                      ))}
+                    </motion.div>
+
+                    {/* Signature - Moved left 0.5cm (Previous was translate(-0.5cm, -1cm), so now translate(-1cm, -1cm)) */}
+                    <div className="mt-8 flex justify-end relative z-10" style={{ transform: 'translate(-1cm, -1cm)' }}>
+                      <span className="text-sm font-sans text-gray-500/80 tracking-widest uppercase">
+                        From {SENDER_NAME}
+                      </span>
+                    </div>
                   </motion.div>
-                </div>
-
-                <motion.div 
-                  className="font-cute text-xl md:text-2xl text-[#5D4037] leading-[1.8] tracking-wide flex-grow relative z-10"
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
-                  {letterChars.map((char, i) => (
-                    <motion.span key={i} variants={charVariants}>
-                      {char}
-                    </motion.span>
-                  ))}
-                </motion.div>
-
-                <div className="mt-8 flex justify-end relative z-10">
-                  <span className="text-sm font-sans text-gray-500/80 tracking-widest uppercase">
-                    来自 {SENDER_NAME}
-                  </span>
-                </div>
-              </motion.div>
+              </div>
 
               <div className="flex flex-col items-center gap-8 relative">
                 
