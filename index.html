@@ -197,7 +197,7 @@
       import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
       import { createRoot } from 'react-dom/client';
       import { motion, AnimatePresence, useAnimation } from 'framer-motion';
-      import { Volume2, VolumeX, ArrowLeft, X, ArrowRight, Camera, Mic, Flame, Wind, Hand, RefreshCw, XCircle, Heart, Sparkles, Download, Share2, PenTool, AlertCircle, User, Lock, Eye, EyeOff, MessageCircle, Bell, ChevronLeft, Disc, Music, Play, Pause, SkipBack, SkipForward, Cloud, Upload, Grid, ImageIcon, Star, Wand2 } from 'lucide-react';
+      import { Volume2, VolumeX, ArrowLeft, X, ArrowRight, Camera, Mic, Flame, Wind, Hand, RefreshCw, XCircle, Heart, Sparkles, Download, Share2, PenTool, AlertCircle, User, Lock, Eye, EyeOff, MessageCircle, Bell, ChevronLeft, ChevronRight, Disc, Music, Play, Pause, SkipBack, SkipForward, Cloud, Upload, Grid, ImageIcon, Star, Wand2 } from 'lucide-react';
       import * as THREE from 'three';
       import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
       import gsap from 'gsap';
@@ -1210,6 +1210,14 @@
         const goToPage = (idx) => {
             if(pageFlipRef.current) pageFlipRef.current.flip(idx);
         };
+        
+        const goNext = () => {
+           if(pageFlipRef.current) pageFlipRef.current.flipNext();
+        };
+
+        const goPrev = () => {
+           if(pageFlipRef.current) pageFlipRef.current.flipPrev();
+        };
 
         const containerClass = isBackgroundMode ? 'blur-sm opacity-30 pointer-events-none scale-90 grayscale' : 'opacity-100 scale-100';
 
@@ -1459,15 +1467,18 @@
                 </div>
             </div>
             
-            {/* Controls & UI Overlay */}
+            {/* Controls & UI Overlay - CENTERED & ENHANCED */}
             {!isBackgroundMode && isLoaded && (
                 <>
                     <div 
                         className="fixed bottom-6 left-1/2 z-40 bg-white/80 backdrop-blur-md px-6 py-2 rounded-full shadow-lg flex items-center gap-4 text-[#5D4037] text-sm"
-                        style={{ transform: 'translateX(calc(-50% - 4.5cm))' }}
+                        style={{ transform: 'translateX(-50%)' }}
                     >
-                        <span className="font-mono">Page {currentPage} / {totalPages}</span>
-                        <div className="h-4 w-px bg-[#5D4037]/20"></div>
+                        <button onClick={goPrev} className="hover:text-usagi-orange transition-colors"><ChevronLeft size={20}/></button>
+                        <span className="font-mono min-w-[80px] text-center">Page {currentPage} / {totalPages}</span>
+                        <button onClick={goNext} className="hover:text-usagi-orange transition-colors"><ChevronRight size={20}/></button>
+                        
+                        <div className="h-4 w-px bg-[#5D4037]/20 mx-2"></div>
                         <button onClick={() => setShowThumbnails(true)} className="hover:text-usagi-orange transition-colors" title="Gallery"><Grid size={18} /></button>
                     </div>
                     <AnimatePresence>
@@ -2370,14 +2381,23 @@
                 let sum = 0; for(let i=0; i<data.length; i++) sum += data[i];
                 const avg = sum / data.length;
                 
-                if (avg > CONFIG.thresholds.audioLevel) {
+                // --- MODIFIED BLOW DETECTION ---
+                // "Blowing" generates sustained noise across frequencies (white/pink noise)
+                // Threshold lowered to 40 (out of 255) to be more sensitive to quieter microphones
+                // Instead of resetting immediately on a "miss" (avg < 40), we decay the counter slowly.
+                // This simulates "heat" buildup and allows for slightly fluctuating breath.
+                
+                if (avg > 40) {
                    blowTriggerCount.current++;
-                   if (blowTriggerCount.current > 15) { 
+                   // Trigger count reduced to 20 frames (~0.3-0.4s) for faster response
+                   if (blowTriggerCount.current > 20) { 
                       triggerAction('EXTINGUISH'); 
-                      blowTriggerCount.current = 0; 
+                      blowTriggerCount.current = 0; // Reset after trigger
                    }
                 } else {
-                   blowTriggerCount.current = Math.max(0, blowTriggerCount.current - 2);
+                   // Decay slowly instead of hard reset
+                   // This allows the user to maintain progress if volume dips briefly
+                   blowTriggerCount.current = Math.max(0, blowTriggerCount.current - 1);
                 }
               }
               audioCheckRaf.current = requestAnimationFrame(checkAudio);
@@ -2538,7 +2558,9 @@
       // --- APP ROOT ---
       const App = () => {
         const [scene, setScene] = useState('LOGIN');
-        const [muted, setMuted] = useState(false);
+        // Initialize muted to TRUE to match typical browser autoplay blocking policy.
+        // This ensures the icon starts as "Mute", and user click turns it to "Sound" and plays audio.
+        const [muted, setMuted] = useState(true);
         const bgmRef = useRef(null);
         
         // Handle BGM Logic for Scene Changes
@@ -2577,6 +2599,7 @@
 
         const playBGM = () => {
            if(bgmRef.current) {
+              setMuted(false); // Automatically unmute on explicit play action
               bgmRef.current.play().catch(e => console.log("Manual play failed", e));
            }
         };
